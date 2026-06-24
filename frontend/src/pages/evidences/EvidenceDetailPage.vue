@@ -34,9 +34,76 @@
         </div>
         <p class="q-mt-md">{{ evidence.description }}</p>
       </q-card-section>
-      <q-card-actions v-if="evidence.current_file" align="left">
-        <q-btn color="primary" icon="description" label="Archivo actual" :href="evidence.current_file.url" target="_blank" :disable="!evidence.current_file.url" />
-      </q-card-actions>
+      <q-separator v-if="evidence.current_file" />
+      <q-card-section v-if="evidence.current_file">
+        <div class="file-viewer">
+          <div class="file-viewer__header">
+            <div class="file-viewer__identity">
+              <q-avatar color="blue-1" text-color="primary" :icon="fileIcon(evidence.current_file)" />
+              <div>
+                <div class="file-viewer__title">{{ evidence.current_file.original_name }}</div>
+                <div class="file-viewer__meta">
+                  {{ evidence.current_file.extension?.toUpperCase() || 'ARCHIVO' }}
+                  <span v-if="evidence.current_file.size_bytes"> &middot; {{ formatSize(evidence.current_file.size_bytes) }}</span>
+                  <span v-if="evidence.current_file.temporary_url_expires_in_minutes">
+                    &middot; enlace temporal {{ evidence.current_file.temporary_url_expires_in_minutes }} min
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="file-viewer__actions">
+              <q-btn
+                outline
+                no-caps
+                color="primary"
+                icon="open_in_new"
+                label="Abrir"
+                :href="evidence.current_file.preview_url"
+                target="_blank"
+                :disable="!evidence.current_file.preview_url"
+              />
+              <q-btn
+                unelevated
+                no-caps
+                color="primary"
+                icon="download"
+                label="Descargar"
+                :href="evidence.current_file.download_url || evidence.current_file.preview_url"
+                target="_blank"
+                :disable="!evidence.current_file.download_url && !evidence.current_file.preview_url"
+              />
+            </div>
+          </div>
+
+          <div v-if="evidence.current_file.can_preview && evidence.current_file.preview_url" class="file-preview">
+            <iframe
+              v-if="evidence.current_file.file_type === 'pdf'"
+              class="file-preview__frame"
+              :src="evidence.current_file.preview_url"
+              title="Vista previa PDF"
+            />
+            <q-img
+              v-else-if="evidence.current_file.file_type === 'image'"
+              class="file-preview__image"
+              :src="evidence.current_file.preview_url"
+              fit="contain"
+            />
+            <video
+              v-else-if="evidence.current_file.file_type === 'video'"
+              class="file-preview__video"
+              :src="evidence.current_file.preview_url"
+              controls
+              preload="metadata"
+            />
+          </div>
+          <q-banner v-else class="file-preview__empty" rounded>
+            <template #avatar>
+              <q-icon :name="fileIcon(evidence.current_file)" color="primary" />
+            </template>
+            Este tipo de archivo no tiene vista previa integrada. Puedes abrirlo o descargarlo.
+          </q-banner>
+        </div>
+      </q-card-section>
     </q-card>
 
     <div class="row q-col-gutter-md" v-if="evidence">
@@ -46,12 +113,38 @@
           <q-list separator>
             <q-item v-for="version in evidence.versions" :key="version.id">
               <q-item-section avatar>
-                <q-icon name="history" />
+                <q-icon :name="fileIcon(version.file)" />
               </q-item-section>
               <q-item-section>
                 <q-item-label>Version {{ version.version_number }}</q-item-label>
                 <q-item-label caption>{{ version.change_summary }}</q-item-label>
                 <q-item-label caption>{{ version.file ? version.file.original_name : '' }}</q-item-label>
+              </q-item-section>
+              <q-item-section side v-if="version.file">
+                <div class="row no-wrap q-gutter-xs">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="open_in_new"
+                    :href="version.file.preview_url"
+                    target="_blank"
+                    :disable="!version.file.preview_url"
+                  >
+                    <q-tooltip>Abrir version</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="download"
+                    :href="version.file.download_url || version.file.preview_url"
+                    target="_blank"
+                    :disable="!version.file.download_url && !version.file.preview_url"
+                  >
+                    <q-tooltip>Descargar version</q-tooltip>
+                  </q-btn>
+                </div>
               </q-item-section>
             </q-item>
           </q-list>
@@ -220,9 +313,124 @@ export default {
       return value ? new Date(value).toLocaleString() : ''
     },
 
+    formatSize (bytes) {
+      if (!bytes) return ''
+      const units = ['B', 'KB', 'MB', 'GB']
+      let size = Number(bytes)
+      let unit = 0
+
+      while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024
+        unit += 1
+      }
+
+      return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`
+    },
+
+    fileIcon (file) {
+      const type = file?.file_type
+      const map = {
+        pdf: 'picture_as_pdf',
+        image: 'image',
+        video: 'movie',
+        document: 'article',
+        spreadsheet: 'table_chart',
+        presentation: 'slideshow',
+        archive: 'folder_zip'
+      }
+
+      return map[type] || 'description'
+    },
+
     can (permission) {
       return this.userPermissions.includes(permission)
     }
   }
 }
 </script>
+
+<style scoped>
+.file-viewer {
+  display: grid;
+  gap: 16px;
+}
+
+.file-viewer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.file-viewer__identity {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.file-viewer__title {
+  color: #172234;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.file-viewer__meta {
+  color: #667085;
+  font-size: 0.86rem;
+}
+
+.file-viewer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.file-preview {
+  overflow: hidden;
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.file-preview__frame {
+  display: block;
+  width: 100%;
+  min-height: min(72vh, 720px);
+  border: 0;
+}
+
+.file-preview__image {
+  width: 100%;
+  max-height: 720px;
+}
+
+.file-preview__video {
+  display: block;
+  width: 100%;
+  max-height: 720px;
+  background: #000;
+}
+
+.file-preview__empty {
+  border: 1px solid #dbe4ee;
+  background: #f8fafc;
+  color: #475467;
+}
+
+.dialog-card {
+  width: min(560px, calc(100vw - 32px));
+}
+
+@media (max-width: 720px) {
+  .file-viewer__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .file-viewer__actions {
+    justify-content: flex-start;
+  }
+}
+</style>
