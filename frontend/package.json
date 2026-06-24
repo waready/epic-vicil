@@ -1,0 +1,21 @@
+{
+  "name": "acreditacion-quasar-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "quasar dev",
+    "build": "quasar build",
+    "lint": "eslint --ext .js,.vue ./"
+  },
+  "dependencies": {
+    "@quasar/extras": "2.0.0",
+    "axios": "1.17.0",
+    "quasar": "2.19.3",
+    "vue": "3.5.35",
+    "vue-router": "4.5.0"
+  },
+  "devDependencies": {
+    "@quasar/app-vite": "2.6.2",
+    "@rolldown/binding-win32-x64-msvc": "^1.0.3"
+  }
+}
