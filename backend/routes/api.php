@@ -14,7 +14,18 @@ use App\Http\Controllers\Api\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
-Route::get('/openapi.json', fn () => response()->json(json_decode(file_get_contents(storage_path('api-docs/api-docs.json')), true))->header('Content-Type', 'application/json')->header('Access-Control-Allow-Origin', '*'));
+Route::get('/openapi.json', function () {
+    $path = storage_path('api-docs/api-docs.json');
+
+    if (! file_exists($path)) {
+        return response()->json(['message' => 'OpenAPI documentation has not been generated.'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    return response()->json(json_decode(file_get_contents($path), true))
+        ->header('Content-Type', 'application/json')
+        ->header('Access-Control-Allow-Origin', '*');
+});
 Route::post('/auth/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
