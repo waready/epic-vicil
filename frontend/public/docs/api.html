@@ -208,7 +208,7 @@
         <pre>curl -X POST https://waready.org.pe/api/auth/login \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
-  --data '{"email":"admin@acreditacion.local","password":"password"}'</pre>
+  --data '{"email":"usuario@dominio.edu.pe","password":"TU_CONTRASENA"}'</pre>
 
         <h3>Consultar usuario autenticado</h3>
         <pre>curl https://waready.org.pe/api/auth/me \
@@ -220,13 +220,13 @@
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
-  --data '{"current_password":"password","password":"NuevaClave123","password_confirmation":"NuevaClave123"}'</pre>
+  --data '{"current_password":"CONTRASENA_ACTUAL","password":"NuevaClave123","password_confirmation":"NuevaClave123"}'</pre>
 
         <h2>Pruebas De Produccion Ejecutadas</h2>
         <ul>
           <li>HTTPS frontend: OK.</li>
           <li>HTTPS backend <code>/api/health</code>: OK.</li>
-          <li>Login con admin seed: OK.</li>
+          <li>Login con usuario autorizado: OK.</li>
           <li><code>/api/auth/me</code>: OK.</li>
           <li><code>/api/dashboard/summary</code>: OK.</li>
           <li><code>/api/uploads/direct/presign</code>: OK.</li>

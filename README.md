@@ -120,7 +120,7 @@ Login:       http://localhost:9000/login
 
 ## Usuarios Seed
 
-Todos inician con la contrasena temporal `password`. En el primer ingreso el sistema obliga a cambiarla antes de permitir navegar por el resto de modulos.
+Todos inician con una contrasena temporal y el sistema obliga a cambiarla en el primer ingreso antes de permitir navegar por el resto de modulos. En produccion no publiques ni reutilices la clave temporal de instalacion.
 
 | Rol | Correo |
 | --- | --- |
@@ -276,7 +276,7 @@ El seeder deja cargado el plan de assessment 2026-I con 12 resultados `RE-I01` a
 - Rubricas de assessment
 - Video de 10 minutos para cada uno de los 12 cursos de assessment
 
-Ejemplos de cuentas docentes seed para probar, todas con clave temporal `password`:
+Ejemplos de cuentas docentes seed para probar. Todas deben usar la contrasena temporal indicada por el administrador y cambiarla en el primer ingreso:
 
 | Docente | Correo |
 | --- | --- |
@@ -289,7 +289,7 @@ El formato de correo docente es `iniciales de nombres + primer apellido + @docen
 
 ## Flujo Docente C5/C6/C3
 
-1. El admin crea o edita el docente en `Docentes`. Puede activar `Crear usuario docente` al crear el registro, o usar el boton de cuenta en un docente existente. La clave inicial por defecto es `password` y el docente debe cambiarla en su primer ingreso.
+1. El admin crea o edita el docente en `Docentes`. Puede activar `Crear usuario docente` al crear el registro, o usar el boton de cuenta en un docente existente. La clave inicial debe entregarse de forma interna y el docente debe cambiarla en su primer ingreso.
 2. El admin define la carga academica en `Carga docente`: programa, semestre, curso, seccion y docente principal.
 3. Si el curso mide un resultado del estudiante, el admin activa `Curso de medicion / assessment`, coloca el RE-Ixx y marca video si corresponde.
 4. Al guardar una carga docente, el backend crea automaticamente tareas C5 por curso. Si es assessment, tambien crea las tareas C3 de medicion.

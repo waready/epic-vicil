@@ -66,8 +66,8 @@ export default {
       unapLogo: new URL('../assets/brand/unap-footer.png', import.meta.url).href,
       civilLogo: new URL('../assets/brand/ep-logo-civil.png', import.meta.url).href,
       form: {
-        email: 'admin@acreditacion.local',
-        password: 'password'
+        email: '',
+        password: ''
       }
     }
   },
