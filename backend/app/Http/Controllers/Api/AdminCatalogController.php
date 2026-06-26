@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicProgram;
 use App\Models\AccreditationCycle;
+use App\Models\AccreditationCriterion;
+use App\Models\AccreditationSubcriterion;
 use App\Models\AcademicTerm;
 use App\Models\CourseAssignment;
 use App\Models\CourseOffering;
@@ -419,6 +421,207 @@ class AdminCatalogController extends Controller
         ], 201);
     }
 
+    public function accreditationCriteria()
+    {
+        return response()->json(AccreditationCriterion::query()
+            ->with('accreditationModel:id,code,name')
+            ->orderBy('accreditation_model_id')
+            ->orderBy('order')
+            ->orderBy('code')
+            ->get());
+    }
+
+    public function storeAccreditationCriterion(Request $request)
+    {
+        $data = $this->validateAccreditationCriterion($request);
+
+        return response()->json(AccreditationCriterion::create($data)->load('accreditationModel:id,code,name'), 201);
+    }
+
+    public function updateAccreditationCriterion(Request $request, AccreditationCriterion $criterion)
+    {
+        $data = $this->validateAccreditationCriterion($request, $criterion);
+        $criterion->update($data);
+
+        return response()->json($criterion->fresh('accreditationModel:id,code,name'));
+    }
+
+    public function destroyAccreditationCriterion(AccreditationCriterion $criterion)
+    {
+        $hasDependencies = EvidenceRequirement::query()
+            ->where('accreditation_criterion_id', $criterion->id)
+            ->exists()
+            || EvidenceTask::query()
+                ->where('accreditation_criterion_id', $criterion->id)
+                ->exists();
+
+        if ($hasDependencies) {
+            $criterion->update(['is_active' => false]);
+
+            return response()->json(['message' => 'El criterio tiene datos asociados y fue desactivado.']);
+        }
+
+        $criterion->delete();
+
+        return response()->json(['message' => 'Criterio eliminado correctamente.']);
+    }
+
+    public function accreditationSubcriteria()
+    {
+        return response()->json(AccreditationSubcriterion::query()
+            ->with('criterion.accreditationModel:id,code,name')
+            ->orderBy('accreditation_criterion_id')
+            ->orderBy('order')
+            ->orderBy('code')
+            ->get());
+    }
+
+    public function storeAccreditationSubcriterion(Request $request)
+    {
+        $data = $this->validateAccreditationSubcriterion($request);
+
+        return response()->json(AccreditationSubcriterion::create($data)->load('criterion.accreditationModel:id,code,name'), 201);
+    }
+
+    public function updateAccreditationSubcriterion(Request $request, AccreditationSubcriterion $subcriterion)
+    {
+        $data = $this->validateAccreditationSubcriterion($request);
+        $subcriterion->update($data);
+
+        return response()->json($subcriterion->fresh('criterion.accreditationModel:id,code,name'));
+    }
+
+    public function destroyAccreditationSubcriterion(AccreditationSubcriterion $subcriterion)
+    {
+        $hasDependencies = EvidenceRequirement::query()
+            ->where('accreditation_subcriterion_id', $subcriterion->id)
+            ->exists()
+            || EvidenceTask::query()
+                ->where('accreditation_subcriterion_id', $subcriterion->id)
+                ->exists();
+
+        if ($hasDependencies) {
+            $subcriterion->update(['is_active' => false]);
+
+            return response()->json(['message' => 'El subcriterio tiene datos asociados y fue desactivado.']);
+        }
+
+        $subcriterion->delete();
+
+        return response()->json(['message' => 'Subcriterio eliminado correctamente.']);
+    }
+
+    public function evidenceRequirements()
+    {
+        return response()->json(EvidenceRequirement::query()
+            ->with(['criterion.accreditationModel:id,code,name', 'subcriterion:id,code,name'])
+            ->orderBy('accreditation_criterion_id')
+            ->orderBy('order')
+            ->orderBy('code')
+            ->get());
+    }
+
+    public function storeEvidenceRequirement(Request $request)
+    {
+        $data = $this->validateEvidenceRequirement($request);
+
+        return response()->json(EvidenceRequirement::create($data)->load(['criterion.accreditationModel:id,code,name', 'subcriterion:id,code,name']), 201);
+    }
+
+    public function updateEvidenceRequirement(Request $request, EvidenceRequirement $requirement)
+    {
+        $data = $this->validateEvidenceRequirement($request);
+        $requirement->update($data);
+
+        return response()->json($requirement->fresh(['criterion.accreditationModel:id,code,name', 'subcriterion:id,code,name']));
+    }
+
+    public function destroyEvidenceRequirement(EvidenceRequirement $requirement)
+    {
+        $hasDependencies = EvidenceTask::query()
+            ->where('evidence_requirement_id', $requirement->id)
+            ->exists()
+            || DB::table('evidence_submissions')
+                ->where('evidence_requirement_id', $requirement->id)
+                ->exists();
+
+        if ($hasDependencies) {
+            $requirement->update(['is_active' => false]);
+
+            return response()->json(['message' => 'El requerimiento tiene tareas o evidencias asociadas y fue desactivado.']);
+        }
+
+        $requirement->delete();
+
+        return response()->json(['message' => 'Requerimiento eliminado correctamente.']);
+    }
+
+    private function validateAccreditationCriterion(Request $request, ?AccreditationCriterion $criterion = null): array
+    {
+        return $request->validate([
+            'accreditation_model_id' => ['required', 'exists:accreditation_models,id'],
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('accreditation_criteria', 'code')
+                    ->where(fn ($query) => $query->where('accreditation_model_id', $request->input('accreditation_model_id', $criterion?->accreditation_model_id)))
+                    ->ignore($criterion?->id),
+            ],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'is_active' => ['boolean'],
+        ]);
+    }
+
+    private function validateAccreditationSubcriterion(Request $request): array
+    {
+        return $request->validate([
+            'accreditation_criterion_id' => ['required', 'exists:accreditation_criteria,id'],
+            'code' => ['nullable', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'is_active' => ['boolean'],
+        ]);
+    }
+
+    private function validateEvidenceRequirement(Request $request): array
+    {
+        $data = $request->validate([
+            'accreditation_criterion_id' => ['required', 'exists:accreditation_criteria,id'],
+            'accreditation_subcriterion_id' => ['nullable', 'exists:accreditation_subcriteria,id'],
+            'code' => ['nullable', 'string', 'max:80'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'applies_to' => ['required', Rule::in(config('accreditation.context_types'))],
+            'evidence_kind' => ['required', 'string', 'max:80'],
+            'is_required' => ['boolean'],
+            'allows_multiple_files' => ['boolean'],
+            'allowed_extensions' => ['nullable', 'array'],
+            'allowed_extensions.*' => ['required', 'string', 'max:30'],
+            'order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'is_active' => ['boolean'],
+        ]);
+
+        if (! empty($data['accreditation_subcriterion_id'])) {
+            $belongsToCriterion = AccreditationSubcriterion::query()
+                ->where('id', $data['accreditation_subcriterion_id'])
+                ->where('accreditation_criterion_id', $data['accreditation_criterion_id'])
+                ->exists();
+
+            abort_unless($belongsToCriterion, 422, 'El subcriterio no pertenece al criterio seleccionado.');
+        }
+
+        $data['allowed_extensions'] = array_values(array_unique(array_map(
+            fn ($extension) => strtolower(trim((string) $extension)),
+            $data['allowed_extensions'] ?? config('accreditation.allowed_extensions')
+        )));
+
+        return $data;
+    }
+
     private function validateFaculty(Request $request, ?Faculty $faculty = null): array
     {
         return $request->validate([
@@ -608,6 +811,7 @@ class AdminCatalogController extends Controller
             $requirements = EvidenceRequirement::query()
                 ->with('criterion')
                 ->whereIn('applies_to', ['course_offering', 'assessment_course'])
+                ->where('is_active', true)
                 ->whereHas('criterion', fn ($query) => $query->where('accreditation_model_id', $cycle->accreditation_model_id))
                 ->get();
 
@@ -711,6 +915,7 @@ class AdminCatalogController extends Controller
             $requirements = EvidenceRequirement::query()
                 ->with('criterion')
                 ->where('applies_to', 'teacher')
+                ->where('is_active', true)
                 ->whereHas('criterion', fn ($query) => $query->where('accreditation_model_id', $cycle->accreditation_model_id))
                 ->get();
 

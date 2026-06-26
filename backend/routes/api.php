@@ -107,6 +107,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/teachers/{teacher}', [AdminCatalogController::class, 'destroyTeacher']);
         Route::post('/teachers/{teacher}/user', [AdminCatalogController::class, 'createTeacherUser']);
         Route::post('/teachers/{teacher}/cv', [AdminCatalogController::class, 'uploadTeacherCv']);
+
+        Route::get('/accreditation-criteria', [AdminCatalogController::class, 'accreditationCriteria']);
+        Route::post('/accreditation-criteria', [AdminCatalogController::class, 'storeAccreditationCriterion']);
+        Route::put('/accreditation-criteria/{criterion}', [AdminCatalogController::class, 'updateAccreditationCriterion']);
+        Route::delete('/accreditation-criteria/{criterion}', [AdminCatalogController::class, 'destroyAccreditationCriterion']);
+
+        Route::get('/accreditation-subcriteria', [AdminCatalogController::class, 'accreditationSubcriteria']);
+        Route::post('/accreditation-subcriteria', [AdminCatalogController::class, 'storeAccreditationSubcriterion']);
+        Route::put('/accreditation-subcriteria/{subcriterion}', [AdminCatalogController::class, 'updateAccreditationSubcriterion']);
+        Route::delete('/accreditation-subcriteria/{subcriterion}', [AdminCatalogController::class, 'destroyAccreditationSubcriterion']);
+
+        Route::get('/evidence-requirements', [AdminCatalogController::class, 'evidenceRequirements']);
+        Route::post('/evidence-requirements', [AdminCatalogController::class, 'storeEvidenceRequirement']);
+        Route::put('/evidence-requirements/{requirement}', [AdminCatalogController::class, 'updateEvidenceRequirement']);
+        Route::delete('/evidence-requirements/{requirement}', [AdminCatalogController::class, 'destroyEvidenceRequirement']);
     });
 
     Route::prefix('dashboard')->group(function () {

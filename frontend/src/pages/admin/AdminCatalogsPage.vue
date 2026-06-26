@@ -221,6 +221,28 @@ export default {
         terms: [],
         courses: [],
         teachers: [],
+        accreditationModels: [],
+        criteria: [],
+        subcriteria: [],
+        appliesTo: [
+          { label: 'Programa', value: 'program' },
+          { label: 'Curso / carga docente', value: 'course_offering' },
+          { label: 'Curso de medicion', value: 'assessment_course' },
+          { label: 'Docente', value: 'teacher' },
+          { label: 'Laboratorio', value: 'laboratory' },
+          { label: 'Instalacion', value: 'facility' },
+          { label: 'Proyecto integrador', value: 'integrator_project' },
+          { label: 'Plan de mejora', value: 'improvement_plan' },
+          { label: 'Graduado', value: 'graduate' }
+        ],
+        evidenceKinds: [
+          { label: 'Normativa', value: 'normative' },
+          { label: 'Registro', value: 'record' },
+          { label: 'Portafolio', value: 'portfolio' },
+          { label: 'Assessment', value: 'assessment' },
+          { label: 'Video', value: 'video' },
+          { label: 'Reporte', value: 'report' }
+        ],
         offeringStatuses: [
           { label: 'Activo', value: 'active' },
           { label: 'Cerrado', value: 'closed' },
@@ -450,6 +472,86 @@ export default {
             { name: 'password', label: 'Password inicial', type: 'password', visibleWhen: form => form.create_user, createOnly: true },
             { name: 'is_active', label: 'Activo', type: 'toggle', default: true }
           ]
+        },
+        accreditationCriteria: {
+          label: 'Criterios',
+          singular: 'criterio',
+          title: 'Criterios de acreditacion',
+          icon: 'fact_check',
+          endpoint: '/admin/accreditation-criteria',
+          help: 'Administra criterios por modelo de acreditacion, como ICACIT o SINEACE.',
+          columns: [
+            { name: 'model', label: 'Modelo', field: row => row.accreditation_model ? row.accreditation_model.code : '', align: 'left', sortable: true },
+            { name: 'code', label: 'Codigo', field: 'code', align: 'left', sortable: true },
+            { name: 'name', label: 'Criterio', field: 'name', align: 'left', sortable: true },
+            { name: 'order', label: 'Orden', field: 'order', align: 'center', sortable: true },
+            { name: 'is_active', label: 'Estado', field: 'is_active', align: 'center' },
+            { name: 'actions', label: 'Acciones', align: 'center' }
+          ],
+          fields: [
+            { name: 'accreditation_model_id', label: 'Modelo', type: 'select', options: 'accreditationModels', required: true },
+            { name: 'code', label: 'Codigo', required: true },
+            { name: 'name', label: 'Nombre', required: true, class: 'col-12' },
+            { name: 'description', label: 'Descripcion', type: 'textarea', class: 'col-12' },
+            { name: 'order', label: 'Orden', type: 'number' },
+            { name: 'is_active', label: 'Activo', type: 'toggle', default: true }
+          ]
+        },
+        accreditationSubcriteria: {
+          label: 'Subcriterios',
+          singular: 'subcriterio',
+          title: 'Subcriterios de acreditacion',
+          icon: 'account_tree',
+          endpoint: '/admin/accreditation-subcriteria',
+          help: 'Administra subcriterios/documentos internos asociados a cada criterio.',
+          columns: [
+            { name: 'criterion', label: 'Criterio', field: row => row.criterion ? `${row.criterion.code} - ${row.criterion.name}` : '', align: 'left', sortable: true },
+            { name: 'code', label: 'Codigo', field: 'code', align: 'left', sortable: true },
+            { name: 'name', label: 'Subcriterio', field: 'name', align: 'left', sortable: true },
+            { name: 'order', label: 'Orden', field: 'order', align: 'center', sortable: true },
+            { name: 'is_active', label: 'Estado', field: 'is_active', align: 'center' },
+            { name: 'actions', label: 'Acciones', align: 'center' }
+          ],
+          fields: [
+            { name: 'accreditation_criterion_id', label: 'Criterio', type: 'select', options: 'criteria', required: true, class: 'col-12' },
+            { name: 'code', label: 'Codigo' },
+            { name: 'name', label: 'Nombre', required: true, class: 'col-12' },
+            { name: 'description', label: 'Descripcion', type: 'textarea', class: 'col-12' },
+            { name: 'order', label: 'Orden', type: 'number' },
+            { name: 'is_active', label: 'Activo', type: 'toggle', default: true }
+          ]
+        },
+        evidenceRequirements: {
+          label: 'Requerimientos',
+          singular: 'requerimiento',
+          title: 'Evidencias requeridas',
+          icon: 'assignment',
+          endpoint: '/admin/evidence-requirements',
+          help: 'Administra evidencias requeridas como C5-PORT-01, C5-PORT-02, C6-REG-01 y similares.',
+          columns: [
+            { name: 'criterion', label: 'Criterio', field: row => row.criterion ? `${row.criterion.code} - ${row.criterion.name}` : '', align: 'left', sortable: true },
+            { name: 'code', label: 'Codigo', field: 'code', align: 'left', sortable: true },
+            { name: 'name', label: 'Evidencia requerida', field: 'name', align: 'left', sortable: true },
+            { name: 'applies_to', label: 'Aplica a', field: 'applies_to', align: 'left', sortable: true },
+            { name: 'evidence_kind', label: 'Tipo', field: 'evidence_kind', align: 'left', sortable: true },
+            { name: 'is_required', label: 'Obligatoria', field: row => row.is_required ? 'Si' : 'No', align: 'center' },
+            { name: 'is_active', label: 'Estado', field: 'is_active', align: 'center' },
+            { name: 'actions', label: 'Acciones', align: 'center' }
+          ],
+          fields: [
+            { name: 'accreditation_criterion_id', label: 'Criterio', type: 'select', options: 'criteria', required: true, class: 'col-12' },
+            { name: 'accreditation_subcriterion_id', label: 'Subcriterio', type: 'select', options: 'subcriteria', class: 'col-12' },
+            { name: 'code', label: 'Codigo' },
+            { name: 'name', label: 'Nombre', required: true, class: 'col-12' },
+            { name: 'description', label: 'Descripcion', type: 'textarea', class: 'col-12' },
+            { name: 'applies_to', label: 'Aplica a', type: 'select', options: 'appliesTo', required: true },
+            { name: 'evidence_kind', label: 'Tipo de evidencia', type: 'select', options: 'evidenceKinds', required: true },
+            { name: 'allowed_extensions_text', label: 'Extensiones permitidas (separadas por coma)', clientOnly: true, class: 'col-12' },
+            { name: 'order', label: 'Orden', type: 'number' },
+            { name: 'is_required', label: 'Obligatoria', type: 'toggle', default: true },
+            { name: 'allows_multiple_files', label: 'Permite varios archivos', type: 'toggle', default: true },
+            { name: 'is_active', label: 'Activo', type: 'toggle', default: true }
+          ]
         }
       }
     }
@@ -490,6 +592,14 @@ export default {
       }
     },
 
+    'form.accreditation_criterion_id' () {
+      if (this.activeTab !== 'evidenceRequirements') return
+      const options = this.optionsFor('subcriteria')
+      if (!options.some(item => item.value === this.form.accreditation_subcriterion_id)) {
+        this.form.accreditation_subcriterion_id = options.length ? options[0].value : ''
+      }
+    },
+
     '$route.path' () {
       this.syncTabFromRoute()
     }
@@ -511,7 +621,10 @@ export default {
         '/study-plans': 'studyPlans',
         '/courses': 'courses',
         '/course-offerings': 'courseOfferings',
-        '/teachers': 'teachers'
+        '/teachers': 'teachers',
+        '/accreditation-criteria': 'accreditationCriteria',
+        '/accreditation-subcriteria': 'accreditationSubcriteria',
+        '/evidence-requirements-admin': 'evidenceRequirements'
       }
       this.activeTab = map[this.$route.path] || this.activeTab
     },
@@ -601,6 +714,32 @@ export default {
           }))
         }
 
+        if (name === 'accreditationModels') {
+          const response = await this.$api.get('/accreditation-models')
+          this.optionSets.accreditationModels = response.data.map(item => ({
+            label: `${item.code} - ${item.name}`,
+            value: item.id
+          }))
+        }
+
+        if (name === 'criteria') {
+          const response = await this.$api.get('/admin/accreditation-criteria')
+          this.optionSets.criteria = response.data.map(item => ({
+            label: `${item.accreditation_model ? item.accreditation_model.code + ' / ' : ''}${item.code} - ${item.name}`,
+            value: item.id,
+            accreditation_model_id: item.accreditation_model_id
+          }))
+        }
+
+        if (name === 'subcriteria') {
+          const response = await this.$api.get('/admin/accreditation-subcriteria')
+          this.optionSets.subcriteria = response.data.map(item => ({
+            label: `${item.code || 'Subcriterio'} - ${item.name}`,
+            value: item.id,
+            accreditation_criterion_id: item.accreditation_criterion_id
+          }))
+        }
+
         this.optionLoaded[name] = true
       } catch (error) {
         this.$q.notify({ type: 'negative', message: 'No se pudieron cargar opciones administrativas' })
@@ -631,6 +770,14 @@ export default {
         return (this.optionSets.courses || []).filter(item => {
           if (this.form.study_plan_id) return item.study_plan_id === this.form.study_plan_id
           if (this.form.program_id) return item.program_id === this.form.program_id
+          return true
+        })
+      }
+      if (name === 'subcriteria' && this.activeTab === 'evidenceRequirements') {
+        return (this.optionSets.subcriteria || []).filter(item => {
+          if (this.form.accreditation_criterion_id) {
+            return item.accreditation_criterion_id === this.form.accreditation_criterion_id
+          }
           return true
         })
       }
@@ -668,6 +815,11 @@ export default {
         form.weekly_hours = assignment ? assignment.weekly_hours : ''
         form.study_plan_id = row.course ? row.course.study_plan_id : ''
       }
+      if (this.activeTab === 'evidenceRequirements') {
+        form.allowed_extensions_text = Array.isArray(row.allowed_extensions)
+          ? row.allowed_extensions.join(', ')
+          : ''
+      }
       this.form = form
       this.dialog = true
     },
@@ -701,6 +853,15 @@ export default {
         form.teacher_id = firstValue('teachers')
         form.status = 'active'
       }
+      if (this.activeTab === 'accreditationCriteria') form.accreditation_model_id = firstValue('accreditationModels')
+      if (this.activeTab === 'accreditationSubcriteria') form.accreditation_criterion_id = firstValue('criteria')
+      if (this.activeTab === 'evidenceRequirements') {
+        form.accreditation_criterion_id = firstValue('criteria')
+        form.accreditation_subcriterion_id = this.optionsFor('subcriteria').length ? this.optionsFor('subcriteria')[0].value : ''
+        form.applies_to = 'program'
+        form.evidence_kind = 'record'
+        form.allowed_extensions_text = 'pdf, doc, docx, xls, xlsx, ppt, pptx, jpg, jpeg, png, mp4, zip'
+      }
 
       return form
     },
@@ -720,6 +881,12 @@ export default {
       })
 
       if (!data.password) delete data.password
+      if (this.activeTab === 'evidenceRequirements') {
+        data.allowed_extensions = (this.form.allowed_extensions_text || '')
+          .split(',')
+          .map(item => item.trim().toLowerCase())
+          .filter(Boolean)
+      }
       if (this.activeTab === 'courseOfferings' && !data.is_assessment_course) {
         data.assessment_result_code = null
         data.assessment_result_name = null

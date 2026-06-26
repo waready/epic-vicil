@@ -939,6 +939,7 @@ class DatabaseSeeder extends Seeder
         $requirements = EvidenceRequirement::query()
             ->with('criterion')
             ->whereHas('criterion', fn ($query) => $query->where('accreditation_model_id', $cycle->accreditation_model_id))
+            ->where('is_active', true)
             ->get();
 
         $teacher = Teacher::where('user_id', $users['docente']->id)->first();

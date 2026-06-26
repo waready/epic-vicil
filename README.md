@@ -239,9 +239,21 @@ PUT    /api/admin/teachers/{id}
 DELETE /api/admin/teachers/{id}
 POST   /api/admin/teachers/{id}/user
 POST   /api/admin/teachers/{id}/cv
+GET    /api/admin/accreditation-criteria
+POST   /api/admin/accreditation-criteria
+PUT    /api/admin/accreditation-criteria/{id}
+DELETE /api/admin/accreditation-criteria/{id}
+GET    /api/admin/accreditation-subcriteria
+POST   /api/admin/accreditation-subcriteria
+PUT    /api/admin/accreditation-subcriteria/{id}
+DELETE /api/admin/accreditation-subcriteria/{id}
+GET    /api/admin/evidence-requirements
+POST   /api/admin/evidence-requirements
+PUT    /api/admin/evidence-requirements/{id}
+DELETE /api/admin/evidence-requirements/{id}
 ```
 
-En el frontend se administran desde `Usuarios`, `Instituciones`, `Facultades`, `Programas`, `Planes`, `Cursos`, `Carga docente` y `Docentes` en el menu lateral. Estas rutas requieren el permiso `manage.catalogs`.
+En el frontend se administran desde `Usuarios`, `Criterios`, `Subcriterios`, `Requerimientos`, `Instituciones`, `Facultades`, `Programas`, `Planes`, `Cursos`, `Carga docente` y `Docentes` en el menu lateral. Estas rutas requieren el permiso `manage.catalogs`.
 
 Desde `Usuarios` se crean cuentas con contrasena inicial y uno o varios roles: `super_admin`, `admin_facultad`, `director_programa`, `coordinador_acreditacion`, `comite_calidad`, `docente`, `responsable_laboratorio`, `auditor_interno` o `consulta`.
 
@@ -255,7 +267,8 @@ Los docentes no acceden a administracion, repositorio global, exportaciones ni c
 
 El portafolio docente general se gestiona con tareas C5 por carga docente:
 
-- `C5-PORT-01` Silabo del curso, temario, sesiones de aprendizaje y cronograma de avance
+- `C5-PORT-01` Silabo del curso
+- `C5-PORT-02` Temario, sesiones de aprendizaje y cronograma de avance
 - `C5-PORT-03` Examenes aplicados, formatos, solucionarios y criterios
 - `C5-PORT-04` Guias de trabajo, practicas, laboratorios y trabajos encargados
 - `C5-PORT-05` Trabajos de estudiantes clasificados: bueno, regular y malo

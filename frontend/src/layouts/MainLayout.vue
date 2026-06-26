@@ -153,6 +153,9 @@ export default {
           icon: 'admin_panel_settings',
           items: [
             { label: 'Usuarios', icon: 'manage_accounts', to: '/users', permission: 'manage.catalogs' },
+            { label: 'Criterios', icon: 'fact_check', to: '/accreditation-criteria', permission: 'manage.catalogs' },
+            { label: 'Subcriterios', icon: 'account_tree', to: '/accreditation-subcriteria', permission: 'manage.catalogs' },
+            { label: 'Requerimientos', icon: 'assignment', to: '/evidence-requirements-admin', permission: 'manage.catalogs' },
             { label: 'Instituciones', icon: 'corporate_fare', to: '/institutions', permission: 'manage.catalogs' },
             { label: 'Facultades', icon: 'account_balance', to: '/faculties', permission: 'manage.catalogs' },
             { label: 'Programas', icon: 'school', to: '/programs', permission: 'manage.catalogs' },
