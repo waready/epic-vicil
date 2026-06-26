@@ -470,6 +470,7 @@ class AdminCatalogController extends Controller
     {
         return response()->json(AccreditationSubcriterion::query()
             ->with('criterion.accreditationModel:id,code,name')
+            ->withCount('requirements')
             ->orderBy('accreditation_criterion_id')
             ->orderBy('order')
             ->orderBy('code')

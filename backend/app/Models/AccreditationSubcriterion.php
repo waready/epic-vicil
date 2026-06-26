@@ -12,4 +12,9 @@ class AccreditationSubcriterion extends Model
     {
         return $this->belongsTo(AccreditationCriterion::class, 'accreditation_criterion_id');
     }
+
+    public function requirements()
+    {
+        return $this->hasMany(EvidenceRequirement::class, 'accreditation_subcriterion_id');
+    }
 }

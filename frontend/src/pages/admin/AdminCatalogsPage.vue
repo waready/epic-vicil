@@ -503,11 +503,13 @@ export default {
           title: 'Subcriterios de acreditacion',
           icon: 'account_tree',
           endpoint: '/admin/accreditation-subcriteria',
-          help: 'Administra subcriterios/documentos internos asociados a cada criterio.',
+          help: 'Administra subcriterios asociados a un criterio. El criterio padre define el modelo y el bloque documental donde se usara.',
           columns: [
-            { name: 'criterion', label: 'Criterio', field: row => row.criterion ? `${row.criterion.code} - ${row.criterion.name}` : '', align: 'left', sortable: true },
-            { name: 'code', label: 'Codigo', field: 'code', align: 'left', sortable: true },
-            { name: 'name', label: 'Subcriterio', field: 'name', align: 'left', sortable: true },
+            { name: 'model', label: 'Modelo', field: row => row.criterion?.accreditation_model?.code || '', align: 'left', sortable: true },
+            { name: 'parent_criterion', label: 'Criterio padre', field: row => row.criterion ? `${row.criterion.code} - ${row.criterion.name}` : '', align: 'left', sortable: true },
+            { name: 'code', label: 'Cod. subcriterio', field: 'code', align: 'left', sortable: true },
+            { name: 'name', label: 'Nombre del subcriterio', field: 'name', align: 'left', sortable: true },
+            { name: 'requirements_count', label: 'Req.', field: 'requirements_count', align: 'center', sortable: true },
             { name: 'order', label: 'Orden', field: 'order', align: 'center', sortable: true },
             { name: 'is_active', label: 'Estado', field: 'is_active', align: 'center' },
             { name: 'actions', label: 'Acciones', align: 'center' }
@@ -734,7 +736,7 @@ export default {
         if (name === 'subcriteria') {
           const response = await this.$api.get('/admin/accreditation-subcriteria')
           this.optionSets.subcriteria = response.data.map(item => ({
-            label: `${item.code || 'Subcriterio'} - ${item.name}`,
+            label: `${item.criterion?.code || 'Criterio'} / ${item.code || 'Subcriterio'} - ${item.name}`,
             value: item.id,
             accreditation_criterion_id: item.accreditation_criterion_id
           }))
