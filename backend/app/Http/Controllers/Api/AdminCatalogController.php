@@ -817,6 +817,10 @@ class AdminCatalogController extends Controller
                 ->get();
 
             foreach ($requirements as $requirement) {
+                if ($requirement->applies_to === 'course_offering' && $offering->is_assessment_course) {
+                    continue;
+                }
+
                 if ($requirement->applies_to === 'assessment_course' && ! $offering->is_assessment_course) {
                     continue;
                 }
@@ -877,6 +881,11 @@ class AdminCatalogController extends Controller
 
             return;
         }
+
+        EvidenceTask::query()
+            ->where('context_type', 'course_offering')
+            ->where('context_id', $offering->id)
+            ->delete();
 
         if ($offering->requires_assessment_video) {
             return;

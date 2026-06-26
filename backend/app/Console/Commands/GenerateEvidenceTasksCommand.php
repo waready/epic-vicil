@@ -52,7 +52,9 @@ class GenerateEvidenceTasksCommand extends Command
 
     private function generateCourseTasks(AccreditationCycle $cycle, EvidenceRequirement $requirement): int
     {
-        $query = CourseOffering::query()->where('program_id', $cycle->program_id);
+        $query = CourseOffering::query()
+            ->where('program_id', $cycle->program_id)
+            ->where('is_assessment_course', false);
 
         if ($this->option('academic_term_id')) {
             $query->where('academic_term_id', $this->option('academic_term_id'));
