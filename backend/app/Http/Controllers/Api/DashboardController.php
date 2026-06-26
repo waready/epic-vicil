@@ -97,6 +97,48 @@ class DashboardController extends Controller
         return response()->json($query->limit(20)->get());
     }
 
+    public function teacherEvidenceStatus(Request $request)
+    {
+        $rows = $this->taskQuery($request)
+            ->leftJoin('users', 'evidence_tasks.assigned_to', '=', 'users.id')
+            ->leftJoin('teachers', 'teachers.user_id', '=', 'users.id')
+            ->leftJoin('evidence_submissions', function ($join) {
+                $join->on('evidence_submissions.evidence_task_id', '=', 'evidence_tasks.id')
+                    ->whereNull('evidence_submissions.deleted_at');
+            })
+            ->whereNotNull('evidence_tasks.assigned_to')
+            ->select(
+                'users.id as user_id',
+                'users.name',
+                'users.email',
+                'teachers.id as teacher_id',
+                DB::raw('COUNT(DISTINCT evidence_tasks.id) as total'),
+                DB::raw("COUNT(DISTINCT CASE WHEN evidence_tasks.status IN ('pending','assigned') THEN evidence_tasks.id END) as pending"),
+                DB::raw("COUNT(DISTINCT CASE WHEN evidence_tasks.status = 'observed' THEN evidence_tasks.id END) as observed"),
+                DB::raw("COUNT(DISTINCT CASE WHEN evidence_tasks.status IN ('uploaded','in_review','corrected') THEN evidence_tasks.id END) as uploaded"),
+                DB::raw("COUNT(DISTINCT CASE WHEN evidence_tasks.status IN ('validated','approved','ready_to_export') THEN evidence_tasks.id END) as accepted"),
+                DB::raw('COUNT(DISTINCT CASE WHEN evidence_submissions.id IS NOT NULL THEN evidence_tasks.id END) as submitted'),
+                DB::raw('MAX(evidence_submissions.submitted_at) as last_submission_at')
+            )
+            ->groupBy('users.id', 'users.name', 'users.email', 'teachers.id')
+            ->orderByDesc('pending')
+            ->orderBy('users.name')
+            ->get();
+
+        return response()->json($rows->map(function ($row) {
+            $row->total = (int) $row->total;
+            $row->pending = (int) $row->pending;
+            $row->observed = (int) $row->observed;
+            $row->uploaded = (int) $row->uploaded;
+            $row->accepted = (int) $row->accepted;
+            $row->submitted = (int) $row->submitted;
+            $row->missing = $row->pending;
+            $row->progress = $row->total > 0 ? round(($row->submitted / $row->total) * 100, 2) : 0;
+
+            return $row;
+        }));
+    }
+
     private function taskQuery(Request $request)
     {
         $query = EvidenceTask::query();

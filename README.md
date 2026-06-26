@@ -197,6 +197,7 @@ GET  /api/dashboard/summary
 GET  /api/dashboard/progress-by-criterion
 GET  /api/dashboard/progress-by-program
 GET  /api/dashboard/pending-by-teacher
+GET  /api/dashboard/teacher-evidence-status
 POST /api/exports/evidences-zip
 ```
 
@@ -254,8 +255,7 @@ Los docentes no acceden a administracion, repositorio global, exportaciones ni c
 
 El portafolio docente general se gestiona con tareas C5 por carga docente:
 
-- `C5-PORT-01` Silabo del curso
-- `C5-PORT-02` Temario, sesiones y cronograma
+- `C5-PORT-01` Silabo del curso, temario, sesiones de aprendizaje y cronograma de avance
 - `C5-PORT-03` Examenes aplicados, formatos, solucionarios y criterios
 - `C5-PORT-04` Guias de trabajo, practicas, laboratorios y trabajos encargados
 - `C5-PORT-05` Trabajos de estudiantes clasificados: bueno, regular y malo

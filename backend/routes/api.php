@@ -114,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/progress-by-criterion', [DashboardController::class, 'progressByCriterion']);
         Route::get('/progress-by-program', [DashboardController::class, 'progressByProgram']);
         Route::get('/pending-by-teacher', [DashboardController::class, 'pendingByTeacher']);
+        Route::get('/teacher-evidence-status', [DashboardController::class, 'teacherEvidenceStatus']);
     })->middleware('permission:view.dashboard');
 
     Route::get('/evidences', [EvidenceController::class, 'index'])->middleware('permission:view.evidences');

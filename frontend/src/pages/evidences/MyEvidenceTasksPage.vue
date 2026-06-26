@@ -1168,7 +1168,9 @@ export default {
 
     canFallbackToServer (files, error) {
       const serverLimitBytes = 500 * 1024 * 1024
-      const directUnavailable = [400, 404, 409, 422].includes(error.response?.status)
+      const directUnavailable = !error.response ||
+        ['ERR_NETWORK', 'ECONNABORTED'].includes(error.code) ||
+        [400, 403, 404, 409, 422].includes(error.response?.status)
       return directUnavailable && files.every(file => file.size <= serverLimitBytes)
     },
 

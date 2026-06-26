@@ -65,8 +65,7 @@ class AccreditationModelSeeder extends Seeder
             ]],
             ['C5', 'Plan de Estudios', [
                 ['C5-DN-01', 'Plan de estudios vigente y matriz curricular', 'program', 'normative'],
-                ['C5-PORT-01', 'Silabo del curso', 'course_offering', 'portfolio'],
-                ['C5-PORT-02', 'Temario, sesiones de aprendizaje y cronograma de avance', 'course_offering', 'portfolio'],
+                ['C5-PORT-01', 'Silabo del curso, temario, sesiones de aprendizaje y cronograma de avance', 'course_offering', 'portfolio'],
                 ['C5-PORT-03', 'Examenes aplicados, formatos, solucionarios y criterios de calificacion', 'course_offering', 'portfolio'],
                 ['C5-PORT-04', 'Guias de trabajo, practicas, laboratorios y trabajos encargados', 'course_offering', 'portfolio'],
                 ['C5-PORT-05', 'Trabajos de estudiantes clasificados: bueno, regular y malo', 'course_offering', 'portfolio'],
