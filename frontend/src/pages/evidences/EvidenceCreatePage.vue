@@ -47,7 +47,14 @@
               <q-input v-model="form.description" label="Descripcion" type="textarea" outlined />
             </div>
             <div class="col-12">
-              <q-file v-model="file" label="Archivo" outlined clearable counter />
+              <q-file v-model="file" label="Archivo" outlined clearable counter :disable="loading" />
+              <div v-if="directUploading" class="q-mt-md">
+                <div class="row items-center justify-between q-mb-xs">
+                  <span class="text-caption text-grey-7">Subiendo directamente al almacenamiento externo</span>
+                  <span class="text-caption text-weight-bold">{{ uploadProgress }}%</span>
+                </div>
+                <q-linear-progress :value="uploadProgress / 100" color="primary" rounded />
+              </div>
             </div>
           </div>
 
@@ -61,12 +68,16 @@
 </template>
 
 <script>
+import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+
 export default {
   name: 'EvidenceCreatePage',
 
   data () {
     return {
       loading: false,
+      directUploading: false,
+      uploadProgress: 0,
       programs: [],
       cycles: [],
       criteria: [],
@@ -244,24 +255,70 @@ export default {
       }
 
       this.loading = true
+      this.uploadProgress = 0
       try {
+        let asset = null
+
+        try {
+          asset = await this.uploadEvidenceDirect(this.file)
+        } catch (directError) {
+          if (!canFallbackToServer([this.file], directError)) {
+            throw directError
+          }
+        }
+
+        const response = asset
+          ? await this.$api.post('/evidences', {
+              ...this.form,
+              file_asset_id: asset.id
+            })
+          : await this.submitThroughServer()
+
+        this.$q.notify({ type: 'positive', message: 'Evidencia subida correctamente' })
+        this.$router.push(`/evidences/${response.data.data.id}`)
+      } catch (error) {
+        const message = error.response?.data?.message || 'No se pudo subir la evidencia'
+        this.$q.notify({ type: 'negative', message })
+      } finally {
+        this.loading = false
+        this.directUploading = false
+      }
+    },
+
+    async uploadEvidenceDirect (file) {
+      this.directUploading = true
+      const context = this.form.evidence_task_id
+        ? { evidence_task_id: this.form.evidence_task_id }
+        : {
+            program_id: this.form.program_id,
+            accreditation_cycle_id: this.form.accreditation_cycle_id,
+            criterion_id: this.form.criterion_id,
+            course_id: this.form.course_id,
+            teacher_id: this.form.teacher_id
+          }
+
+      return uploadDirectFile({
+        api: this.$api,
+        http: this.$axios,
+        file,
+        context,
+        onProgress: progress => {
+          this.uploadProgress = progress
+        }
+      })
+    },
+
+    submitThroughServer () {
+      this.directUploading = false
         const data = new FormData()
         Object.keys(this.form).forEach(key => {
           if (this.form[key] !== null && this.form[key] !== '') data.append(key, this.form[key])
         })
         data.append('file', this.file)
 
-        const response = await this.$api.post('/evidences', data, {
+      return this.$api.post('/evidences', data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
-
-        this.$q.notify({ type: 'positive', message: 'Evidencia subida correctamente' })
-        this.$router.push(`/evidences/${response.data.data.id}`)
-      } catch (error) {
-        this.$q.notify({ type: 'negative', message: 'No se pudo subir la evidencia' })
-      } finally {
-        this.loading = false
-      }
     }
   }
 }

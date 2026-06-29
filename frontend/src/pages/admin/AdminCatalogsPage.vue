@@ -77,6 +77,17 @@
             <q-btn v-if="activeTab === 'teachers'" dense flat round icon="upload_file" color="secondary" @click="openCvDialog(props.row)">
               <q-tooltip>Subir CV como evidencia C6</q-tooltip>
             </q-btn>
+            <q-btn
+              v-if="activeTab === 'evidenceRequirements' && props.row.is_active"
+              dense
+              flat
+              round
+              icon="merge_type"
+              color="secondary"
+              @click="openConsolidate(props.row)"
+            >
+              <q-tooltip>Consolidar con otro requerimiento</q-tooltip>
+            </q-btn>
             <q-btn dense flat round icon="edit" color="primary" @click="openEdit(props.row)">
               <q-tooltip>Editar</q-tooltip>
             </q-btn>
@@ -142,6 +153,56 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="consolidateDialog" persistent>
+      <q-card class="admin-dialog">
+        <q-form @submit.prevent="consolidateRequirement">
+          <q-card-section>
+            <div class="text-h6">Consolidar requerimiento</div>
+            <div class="text-body2 text-grey-7">
+              {{ consolidationSource ? `${consolidationSource.code} - ${consolidationSource.name}` : '' }}
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section class="q-gutter-md">
+            <q-banner rounded class="bg-orange-1 text-orange-10">
+              Las tareas, envios e historiales se trasladaran al requerimiento destino. El origen quedara inactivo y podras renumerar el grupo.
+            </q-banner>
+
+            <q-select
+              v-model="consolidationForm.target_requirement_id"
+              :options="consolidationTargetOptions"
+              label="Requerimiento destino"
+              outlined
+              emit-value
+              map-options
+              :rules="[val => !!val || 'Selecciona el requerimiento destino']"
+              @update:model-value="setConsolidationTargetName"
+            />
+
+            <q-input
+              v-model="consolidationForm.target_name"
+              label="Nombre final del requerimiento destino"
+              outlined
+              :rules="[val => !!String(val || '').trim() || 'Ingresa el nombre final']"
+            />
+
+            <q-toggle
+              v-model="consolidationForm.renumber_codes"
+              color="primary"
+              label="Renumerar correlativamente los codigos activos del mismo grupo"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="Cancelar" v-close-popup />
+            <q-btn color="primary" icon="merge_type" label="Consolidar" type="submit" unelevated :loading="consolidating" />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="cvDialog" persistent>
       <q-card class="admin-dialog">
         <q-form @submit.prevent="submitTeacherCv">
@@ -169,7 +230,14 @@
                 <q-input v-model="cvForm.description" label="Descripcion" type="textarea" outlined />
               </div>
               <div class="col-12">
-                <q-file v-model="cvForm.file" label="Archivo CV o soporte docente" outlined clearable counter :rules="[val => !!val || 'Selecciona un archivo']" />
+                <q-file v-model="cvForm.file" label="Archivo CV o soporte docente" outlined clearable counter :disable="cvSaving" :rules="[val => !!val || 'Selecciona un archivo']" />
+                <div v-if="cvDirectUploading" class="q-mt-md">
+                  <div class="row items-center justify-between q-mb-xs">
+                    <span class="text-caption text-grey-7">Subiendo directamente al almacenamiento externo</span>
+                    <span class="text-caption text-weight-bold">{{ cvUploadProgress }}%</span>
+                  </div>
+                  <q-linear-progress :value="cvUploadProgress / 100" color="primary" rounded />
+                </div>
               </div>
             </div>
           </q-card-section>
@@ -185,6 +253,8 @@
 </template>
 
 <script>
+import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+
 export default {
   name: 'AdminCatalogsPage',
 
@@ -195,10 +265,15 @@ export default {
       loading: false,
       saving: false,
       cvSaving: false,
+      cvDirectUploading: false,
+      cvUploadProgress: 0,
+      consolidating: false,
       dialog: false,
       cvDialog: false,
+      consolidateDialog: false,
       editingId: null,
       selectedTeacher: null,
+      consolidationSource: null,
       lastRowsRequestId: null,
       form: {},
       cvForm: {
@@ -207,6 +282,11 @@ export default {
         title: '',
         description: '',
         file: null
+      },
+      consolidationForm: {
+        target_requirement_id: null,
+        target_name: '',
+        renumber_codes: true
       },
       rows: [],
       pagination: { rowsPerPage: 12 },
@@ -575,6 +655,21 @@ export default {
         if (field.visibleWhen) return field.visibleWhen(this.form)
         return true
       })
+    },
+
+    consolidationTargetOptions () {
+      if (!this.consolidationSource) return []
+
+      return this.rows
+        .filter(row => row.id !== this.consolidationSource.id &&
+          row.is_active &&
+          row.accreditation_criterion_id === this.consolidationSource.accreditation_criterion_id &&
+          row.applies_to === this.consolidationSource.applies_to)
+        .map(row => ({
+          label: `${row.code || 'Sin codigo'} - ${row.name}`,
+          value: row.id,
+          row
+        }))
     }
   },
 
@@ -686,7 +781,8 @@ export default {
           const response = await this.$api.get('/accreditation-cycles')
           this.optionSets.cycles = response.data.map(item => ({
             label: `${item.name} - ${item.program ? item.program.code : ''}`.trim(),
-            value: item.id
+            value: item.id,
+            accreditation_model_id: item.accreditation_model_id
           }))
         }
 
@@ -729,7 +825,8 @@ export default {
           this.optionSets.criteria = response.data.map(item => ({
             label: `${item.accreditation_model ? item.accreditation_model.code + ' / ' : ''}${item.code} - ${item.name}`,
             value: item.id,
-            accreditation_model_id: item.accreditation_model_id
+            accreditation_model_id: item.accreditation_model_id,
+            code: item.code
           }))
         }
 
@@ -824,6 +921,65 @@ export default {
       }
       this.form = form
       this.dialog = true
+    },
+
+    openConsolidate (row) {
+      this.consolidationSource = row
+      const targets = this.rows
+        .filter(item => item.id !== row.id &&
+          item.is_active &&
+          item.accreditation_criterion_id === row.accreditation_criterion_id &&
+          item.applies_to === row.applies_to)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+      const previousTargets = targets.filter(item => (item.order || 0) < (row.order || 0))
+      const preferred = previousTargets.length ? previousTargets[previousTargets.length - 1] : targets[0]
+
+      this.consolidationForm = {
+        target_requirement_id: preferred ? preferred.id : null,
+        target_name: preferred ? this.combinedRequirementName(preferred, row) : '',
+        renumber_codes: true
+      }
+      this.consolidateDialog = true
+    },
+
+    setConsolidationTargetName (targetId) {
+      const target = this.rows.find(row => row.id === targetId)
+      this.consolidationForm.target_name = target && this.consolidationSource
+        ? this.combinedRequirementName(target, this.consolidationSource)
+        : ''
+    },
+
+    combinedRequirementName (target, source) {
+      const sourceName = String(source.name || '').trim()
+      const suffix = sourceName ? sourceName.charAt(0).toLowerCase() + sourceName.slice(1) : ''
+
+      return [String(target.name || '').trim(), suffix].filter(Boolean).join(', ')
+    },
+
+    async consolidateRequirement () {
+      if (!this.consolidationSource) return
+
+      this.consolidating = true
+      try {
+        const response = await this.$api.post(
+          `/admin/evidence-requirements/${this.consolidationSource.id}/consolidate`,
+          this.consolidationForm
+        )
+        const summary = response.data.summary || {}
+        this.$q.notify({
+          type: 'positive',
+          message: `Consolidacion completada: ${summary.submissions_moved || 0} envios y ${(summary.tasks_moved || 0) + (summary.tasks_consolidated || 0)} tareas procesadas.`
+        })
+        this.consolidateDialog = false
+        this.consolidationSource = null
+        await this.loadRows()
+      } catch (error) {
+        const errors = error.response?.data?.errors
+        const message = errors ? Object.values(errors).flat()[0] : error.response?.data?.message
+        this.$q.notify({ type: 'negative', message: message || 'No se pudo consolidar el requerimiento' })
+      } finally {
+        this.consolidating = false
+      }
     },
 
     emptyForm () {
@@ -931,7 +1087,7 @@ export default {
     },
 
     async openCvDialog (teacher) {
-      await this.ensureOptionSets(['programs', 'cycles'])
+      await this.ensureOptionSets(['programs', 'cycles', 'criteria'])
       this.selectedTeacher = teacher
       this.cvForm = {
         program_id: this.optionSets.programs.length ? this.optionSets.programs[0].value : '',
@@ -940,6 +1096,7 @@ export default {
         description: 'Curriculum vitae y documentos de soporte docente.',
         file: null
       }
+      this.cvUploadProgress = 0
       this.cvDialog = true
     },
 
@@ -950,7 +1107,71 @@ export default {
       }
 
       this.cvSaving = true
+      this.cvUploadProgress = 0
       try {
+        const criterionId = this.cvCriterionId()
+        if (!criterionId) {
+          throw new Error('No se encontro el criterio C6 para el ciclo seleccionado.')
+        }
+
+        let asset = null
+
+        try {
+          this.cvDirectUploading = true
+          asset = await uploadDirectFile({
+            api: this.$api,
+            http: this.$axios,
+            file: this.cvForm.file,
+            context: {
+              program_id: this.cvForm.program_id,
+              accreditation_cycle_id: this.cvForm.accreditation_cycle_id,
+              criterion_id: criterionId,
+              teacher_id: this.selectedTeacher.id
+            },
+            onProgress: progress => {
+              this.cvUploadProgress = progress
+            }
+          })
+        } catch (directError) {
+          if (!canFallbackToServer([this.cvForm.file], directError)) {
+            throw directError
+          }
+        }
+
+        if (asset) {
+          await this.$api.post(`/admin/teachers/${this.selectedTeacher.id}/cv`, {
+            program_id: this.cvForm.program_id,
+            accreditation_cycle_id: this.cvForm.accreditation_cycle_id,
+            title: this.cvForm.title || '',
+            description: this.cvForm.description || '',
+            file_asset_id: asset.id
+          })
+        } else {
+          await this.submitTeacherCvThroughServer()
+        }
+
+        this.$q.notify({ type: 'positive', message: 'CV registrado como evidencia C6' })
+        this.cvDialog = false
+      } catch (error) {
+        const message = error.response?.data?.message || error.message || 'No se pudo subir el CV'
+        this.$q.notify({ type: 'negative', message })
+      } finally {
+        this.cvSaving = false
+        this.cvDirectUploading = false
+      }
+    },
+
+    cvCriterionId () {
+      const cycle = this.optionSets.cycles.find(item => item.value === this.cvForm.accreditation_cycle_id)
+      const criterion = this.optionSets.criteria.find(item =>
+        item.code === 'C6' && item.accreditation_model_id === cycle?.accreditation_model_id
+      )
+
+      return criterion?.value || null
+    },
+
+    submitTeacherCvThroughServer () {
+      this.cvDirectUploading = false
         const data = new FormData()
         data.append('program_id', this.cvForm.program_id)
         data.append('accreditation_cycle_id', this.cvForm.accreditation_cycle_id)
@@ -958,19 +1179,9 @@ export default {
         data.append('description', this.cvForm.description || '')
         data.append('file', this.cvForm.file)
 
-        await this.$api.post(`/admin/teachers/${this.selectedTeacher.id}/cv`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        this.$q.notify({ type: 'positive', message: 'CV registrado como evidencia C6' })
-        this.cvDialog = false
-      } catch (error) {
-        const message = error.response && error.response.data && error.response.data.message
-          ? error.response.data.message
-          : 'No se pudo subir el CV'
-        this.$q.notify({ type: 'negative', message })
-      } finally {
-        this.cvSaving = false
-      }
+      return this.$api.post(`/admin/teachers/${this.selectedTeacher.id}/cv`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
     },
 
     createTeacherAccount (teacher) {

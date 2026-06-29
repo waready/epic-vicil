@@ -3,21 +3,23 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ConsolidateEvidenceRequirementRequest;
 use App\Models\AcademicProgram;
-use App\Models\AccreditationCycle;
 use App\Models\AccreditationCriterion;
+use App\Models\AccreditationCycle;
 use App\Models\AccreditationSubcriterion;
-use App\Models\AcademicTerm;
 use App\Models\CourseAssignment;
 use App\Models\CourseOffering;
 use App\Models\CurriculumCourse;
 use App\Models\EvidenceRequirement;
 use App\Models\EvidenceTask;
 use App\Models\Faculty;
+use App\Models\FileAsset;
 use App\Models\Institution;
 use App\Models\StudyPlan;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\EvidenceRequirementService;
 use App\Services\EvidenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -375,7 +377,8 @@ class AdminCatalogController extends Controller
             'accreditation_cycle_id' => ['required', 'exists:accreditation_cycles,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'file' => ['required', 'file', 'max:'.$maxKb, 'mimes:'.implode(',', config('accreditation.allowed_extensions'))],
+            'file' => ['required_without:file_asset_id', 'file', 'max:'.$maxKb, 'mimes:'.implode(',', config('accreditation.allowed_extensions'))],
+            'file_asset_id' => ['required_without:file', 'nullable', 'exists:file_assets,id'],
         ]);
 
         $cycle = AccreditationCycle::query()->with('model')->findOrFail($data['accreditation_cycle_id']);
@@ -403,7 +406,7 @@ class AdminCatalogController extends Controller
             ]
         );
 
-        $evidence = $evidenceService->create([
+        $evidenceData = [
             'program_id' => $data['program_id'],
             'accreditation_cycle_id' => $cycle->id,
             'criterion_id' => $requirement->accreditation_criterion_id,
@@ -413,7 +416,17 @@ class AdminCatalogController extends Controller
             'teacher_id' => $teacher->id,
             'title' => $data['title'] ?: 'CV docente - '.$teacher->last_name.', '.$teacher->first_name,
             'description' => $data['description'] ?? 'Curriculum vitae y documentos de soporte docente.',
-        ], $request->file('file'), $request);
+        ];
+
+        if (! empty($data['file_asset_id'])) {
+            $asset = FileAsset::query()
+                ->whereKey($data['file_asset_id'])
+                ->where('uploaded_by', $request->user()->id)
+                ->firstOrFail();
+            $evidence = $evidenceService->createFromAsset($evidenceData, $asset, $request);
+        } else {
+            $evidence = $evidenceService->create($evidenceData, $request->file('file'), $request);
+        }
 
         return response()->json([
             'message' => 'CV docente registrado como evidencia del criterio C6.',
@@ -535,6 +548,16 @@ class AdminCatalogController extends Controller
         $requirement->update($data);
 
         return response()->json($requirement->fresh(['criterion.accreditationModel:id,code,name', 'subcriterion:id,code,name']));
+    }
+
+    public function consolidateEvidenceRequirement(
+        ConsolidateEvidenceRequirementRequest $request,
+        EvidenceRequirement $requirement,
+        EvidenceRequirementService $service
+    ) {
+        $target = EvidenceRequirement::findOrFail($request->integer('target_requirement_id'));
+
+        return response()->json($service->consolidate($requirement, $target, $request->validated(), $request));
     }
 
     public function destroyEvidenceRequirement(EvidenceRequirement $requirement)

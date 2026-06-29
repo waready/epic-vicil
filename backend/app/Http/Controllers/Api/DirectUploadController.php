@@ -29,6 +29,8 @@ class DirectUploadController extends Controller
             'program_id' => ['required_without:evidence_task_id', 'exists:programs,id'],
             'accreditation_cycle_id' => ['required_without:evidence_task_id', 'exists:accreditation_cycles,id'],
             'criterion_id' => ['required_without:evidence_task_id', 'exists:accreditation_criteria,id'],
+            'course_id' => ['nullable', 'exists:courses,id'],
+            'teacher_id' => ['nullable', 'exists:teachers,id'],
             'original_name' => ['required', 'string', 'max:512'],
             'mime_type' => ['nullable', 'string', 'max:150'],
             'size_bytes' => ['required', 'integer', 'min:1', 'max:'.$maxBytes],
@@ -148,10 +150,20 @@ class DirectUploadController extends Controller
             ];
         }
 
+        if (! empty($data['course_id']) || ! empty($data['teacher_id'])) {
+            abort_unless(
+                $request->user()?->hasAnyPermission(['manage.catalogs', 'manage.accreditation']),
+                403,
+                'No puedes definir el contexto academico de esta subida.'
+            );
+        }
+
         return [
             'program_id' => $data['program_id'],
             'accreditation_cycle_id' => $data['accreditation_cycle_id'],
             'criterion_id' => $data['criterion_id'],
+            'course_id' => $data['course_id'] ?? null,
+            'teacher_id' => $data['teacher_id'] ?? null,
         ];
     }
 
@@ -187,7 +199,8 @@ class DirectUploadController extends Controller
         }
 
         if (in_array($task->context_type, ['course_offering', 'assessment_course'], true)) {
-            return Teacher::where('user_id', $request->user()?->id)->value('id');
+            return Teacher::where('user_id', $task->assigned_to)->value('id')
+                ?: Teacher::where('user_id', $request->user()?->id)->value('id');
         }
 
         return null;

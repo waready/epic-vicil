@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminCatalogController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DirectUploadController;
@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\EvidenceTaskController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\MyEvidenceController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\TeacherEvidenceTrackingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
@@ -121,7 +122,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/evidence-requirements', [AdminCatalogController::class, 'evidenceRequirements']);
         Route::post('/evidence-requirements', [AdminCatalogController::class, 'storeEvidenceRequirement']);
         Route::put('/evidence-requirements/{requirement}', [AdminCatalogController::class, 'updateEvidenceRequirement']);
+        Route::post('/evidence-requirements/{requirement}/consolidate', [AdminCatalogController::class, 'consolidateEvidenceRequirement']);
         Route::delete('/evidence-requirements/{requirement}', [AdminCatalogController::class, 'destroyEvidenceRequirement']);
+
+        Route::get('/teacher-evidence-tracking', [TeacherEvidenceTrackingController::class, 'summary']);
+        Route::get('/teacher-evidence-tracking/{user}/tasks', [TeacherEvidenceTrackingController::class, 'tasks']);
     });
 
     Route::prefix('dashboard')->group(function () {

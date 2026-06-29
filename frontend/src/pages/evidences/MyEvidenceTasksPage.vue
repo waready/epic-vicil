@@ -698,6 +698,8 @@
 </template>
 
 <script>
+import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+
 export default {
   name: 'MyEvidenceTasksPage',
 
@@ -1167,37 +1169,24 @@ export default {
     },
 
     canFallbackToServer (files, error) {
-      const serverLimitBytes = 500 * 1024 * 1024
-      const directUnavailable = !error.response ||
-        ['ERR_NETWORK', 'ECONNABORTED'].includes(error.code) ||
-        [400, 403, 404, 409, 422].includes(error.response?.status)
-      return directUnavailable && files.every(file => file.size <= serverLimitBytes)
+      return canFallbackToServer(files, error)
     },
 
     async uploadDirectFile (file) {
       this.directUploading = true
       this.uploadProgress = 0
 
-      const presign = await this.$api.post('/uploads/direct/presign', {
-        evidence_task_id: this.selectedTask.id,
-        original_name: file.name,
-        mime_type: file.type || 'application/octet-stream',
-        size_bytes: file.size
-      })
-
-      await this.$axios.put(presign.data.upload_url, file, {
-        headers: presign.data.headers || {},
-        onUploadProgress: event => {
-          if (event.total) {
-            this.uploadProgress = Math.round((event.loaded / event.total) * 100)
-          }
+      const asset = await uploadDirectFile({
+        api: this.$api,
+        http: this.$axios,
+        file,
+        context: { evidence_task_id: this.selectedTask.id },
+        onProgress: progress => {
+          this.uploadProgress = progress
         }
       })
 
-      const completed = await this.$api.post('/uploads/direct/complete', presign.data.file)
-      this.uploadProgress = 100
-
-      return completed.data.data.id
+      return asset.id
     },
 
     formatSubmissionDate (submission) {

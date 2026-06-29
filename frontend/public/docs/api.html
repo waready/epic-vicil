@@ -194,12 +194,16 @@
               <td><code>GET /dashboard/summary</code>, <code>/progress-by-criterion</code>, <code>/progress-by-program</code>, <code>/pending-by-teacher</code>, <code>/teacher-evidence-status</code></td>
             </tr>
             <tr>
+              <td>Seguimiento docente</td>
+              <td><code>GET /admin/teacher-evidence-tracking</code>, <code>GET /admin/teacher-evidence-tracking/{user}/tasks</code></td>
+            </tr>
+            <tr>
               <td>Exportacion</td>
               <td><code>POST /exports/evidences-zip</code></td>
             </tr>
             <tr>
               <td>Administracion acreditacion</td>
-              <td><code>/admin/accreditation-criteria</code>, <code>/admin/accreditation-subcriteria</code>, <code>/admin/evidence-requirements</code> con <code>GET</code>, <code>POST</code>, <code>PUT</code> y <code>DELETE</code></td>
+              <td><code>/admin/accreditation-criteria</code>, <code>/admin/accreditation-subcriteria</code>, <code>/admin/evidence-requirements</code> con <code>GET</code>, <code>POST</code>, <code>PUT</code> y <code>DELETE</code>; <code>POST /admin/evidence-requirements/{id}/consolidate</code></td>
             </tr>
           </tbody>
         </table>

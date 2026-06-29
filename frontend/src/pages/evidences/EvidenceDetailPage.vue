@@ -189,7 +189,14 @@
         <q-card-section><div class="text-h6">Nueva version</div></q-card-section>
         <q-card-section>
           <q-input v-model="version.change_summary" label="Resumen de cambios" type="textarea" outlined class="q-mb-md" />
-          <q-file v-model="version.file" label="Archivo" outlined clearable />
+          <q-file v-model="version.file" label="Archivo" outlined clearable :disable="saving" />
+          <div v-if="directUploading" class="q-mt-md">
+            <div class="row items-center justify-between q-mb-xs">
+              <span class="text-caption text-grey-7">Subiendo directamente al almacenamiento externo</span>
+              <span class="text-caption text-weight-bold">{{ uploadProgress }}%</span>
+            </div>
+            <q-linear-progress :value="uploadProgress / 100" color="primary" rounded />
+          </div>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" v-close-popup />
@@ -202,6 +209,7 @@
 
 <script>
 import { getStoredUser } from 'src/utils/auth'
+import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
 
 export default {
   name: 'EvidenceDetailPage',
@@ -210,6 +218,8 @@ export default {
     return {
       loading: false,
       saving: false,
+      directUploading: false,
+      uploadProgress: 0,
       evidence: null,
       reviewDialog: false,
       review: {
@@ -269,6 +279,7 @@ export default {
 
     openVersionDialog () {
       this.version = { change_summary: '', file: null }
+      this.uploadProgress = 0
       this.versionDialog = true
     },
 
@@ -279,21 +290,70 @@ export default {
       }
 
       this.saving = true
+      this.uploadProgress = 0
       try {
-        const data = new FormData()
-        data.append('change_summary', this.version.change_summary || '')
-        data.append('file', this.version.file)
-        await this.$api.post(`/evidences/${this.evidence.id}/versions`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        let asset = null
+
+        try {
+          asset = await this.uploadVersionDirect(this.version.file)
+        } catch (directError) {
+          if (!canFallbackToServer([this.version.file], directError)) {
+            throw directError
+          }
+
+          await this.submitVersionThroughServer()
+        }
+
+        if (asset) {
+          await this.$api.post(`/evidences/${this.evidence.id}/versions`, {
+            change_summary: this.version.change_summary || '',
+            file_asset_id: asset.id
+          })
+        }
+
         this.$q.notify({ type: 'positive', message: 'Version registrada' })
         this.versionDialog = false
         this.loadEvidence()
       } catch (error) {
-        this.$q.notify({ type: 'negative', message: 'No se pudo subir la version' })
+        const message = error.response?.data?.message || 'No se pudo subir la version'
+        this.$q.notify({ type: 'negative', message })
       } finally {
         this.saving = false
+        this.directUploading = false
       }
+    },
+
+    async uploadVersionDirect (file) {
+      this.directUploading = true
+
+      const context = this.evidence.evidence_task_id
+        ? { evidence_task_id: this.evidence.evidence_task_id }
+        : {
+            program_id: this.evidence.program_id,
+            accreditation_cycle_id: this.evidence.accreditation_cycle_id,
+            criterion_id: this.evidence.criterion_id
+          }
+
+      return uploadDirectFile({
+        api: this.$api,
+        http: this.$axios,
+        file,
+        context,
+        onProgress: progress => {
+          this.uploadProgress = progress
+        }
+      })
+    },
+
+    submitVersionThroughServer () {
+      this.directUploading = false
+      const data = new FormData()
+      data.append('change_summary', this.version.change_summary || '')
+      data.append('file', this.version.file)
+
+      return this.$api.post(`/evidences/${this.evidence.id}/versions`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
     },
 
     statusColor (status) {

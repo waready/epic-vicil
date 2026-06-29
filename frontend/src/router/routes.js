@@ -29,6 +29,7 @@ const routes = [
       { path: 'teachers', component: () => import('pages/admin/AdminCatalogsPage.vue'), meta: { permission: 'manage.catalogs' } },
       { path: 'admin/catalogs', component: () => import('pages/admin/AdminCatalogsPage.vue'), meta: { permission: 'manage.catalogs' } },
       { path: 'reports', component: () => import('pages/reports/ReportsPage.vue'), meta: { permission: 'view.dashboard', blockTeacherOnly: true } },
+      { path: 'teacher-evidence-tracking', component: () => import('pages/reports/TeacherEvidenceTrackingPage.vue'), meta: { permission: 'manage.catalogs', blockTeacherOnly: true } },
       { path: 'exports', component: () => import('pages/exports/ExportPage.vue'), meta: { permission: 'export.evidences' } }
     ]
   },

@@ -145,6 +145,7 @@ export default {
           items: [
             { label: 'Criterios', icon: 'fact_check', to: '/criteria', permission: 'manage.accreditation', blockTeacherOnly: true },
             { label: 'Reportes', icon: 'query_stats', to: '/reports', permission: 'view.dashboard', blockTeacherOnly: true },
+            { label: 'Seguimiento docente', icon: 'person_search', to: '/teacher-evidence-tracking', permission: 'manage.catalogs', blockTeacherOnly: true },
             { label: 'Exportaciones', icon: 'archive', to: '/exports', permission: 'export.evidences' }
           ]
         },
