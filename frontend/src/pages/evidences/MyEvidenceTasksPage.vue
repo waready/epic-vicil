@@ -286,7 +286,7 @@
                 </div>
                 <div class="submission-cell__meta">
                   <q-icon name="history" size="15px" />
-                  Versión {{ props.row.current_submission.version_number || 1 }}
+                  Archivos {{ props.row.current_submission.version_number || 1 }}
                   <span class="submission-cell__separator">•</span>
                   {{ formatSubmissionDate(props.row.current_submission) }}
                 </div>
@@ -384,7 +384,7 @@
                     {{ props.row.current_submission.title }}
                   </div>
                   <div class="submission-cell__meta">
-                    Versión {{ props.row.current_submission.version_number || 1 }}
+                    Archivos {{ props.row.current_submission.version_number || 1 }}
                     • {{ formatSubmissionDate(props.row.current_submission) }}
                   </div>
                 </div>
@@ -534,7 +534,7 @@
                       {{ task.current_submission.title }}
                     </div>
                     <div class="submission-cell__meta">
-                      V{{ task.current_submission.version_number || 1 }}
+                      Docs {{ task.current_submission.version_number || 1 }}
                       <span class="submission-cell__separator">-</span>
                       {{ formatSubmissionDate(task.current_submission) }}
                     </div>
@@ -580,7 +580,7 @@
     <!-- Diálogo de carga -->
     <q-dialog v-model="uploadDialog" persistent>
       <q-card class="upload-dialog">
-        <q-form @submit.prevent="submitTask">
+        <q-form class="upload-dialog__form" @submit.prevent="submitTask">
           <q-card-section class="upload-dialog__header">
             <div class="row items-start no-wrap">
               <q-avatar color="blue-1" text-color="primary" icon="cloud_upload" />
@@ -603,7 +603,7 @@
 
           <q-separator />
 
-          <q-card-section class="q-pa-lg">
+          <q-card-section class="upload-dialog__body q-pa-lg">
             <q-banner class="upload-info-banner" rounded>
               <template #avatar>
                 <q-icon name="info" color="primary" />
@@ -648,7 +648,7 @@
                 multiple
                 use-chips
                 label="Seleccionar archivos"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.mp4,.zip"
+                :accept="acceptedFileExtensions"
                 :rules="[
                   val => (val && val.length > 0) || 'Selecciona al menos un archivo'
                 ]"
@@ -699,6 +699,7 @@
 
 <script>
 import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+import { acceptedEvidenceExtensions } from 'src/utils/evidenceFiles'
 
 export default {
   name: 'MyEvidenceTasksPage',
@@ -709,6 +710,7 @@ export default {
       saving: false,
       directUploading: false,
       uploadProgress: 0,
+      acceptedFileExtensions: acceptedEvidenceExtensions,
       filter: '',
       viewMode: 'grouped',
       uploadDialog: false,
@@ -1815,15 +1817,37 @@ export default {
 
 /* Diálogo */
 .upload-dialog {
+  display: flex;
+  flex-direction: column;
   width: 720px;
+  max-height: min(92vh, 860px);
   max-width: 94vw;
   overflow: hidden;
   border-radius: 16px;
 }
 
+.upload-dialog__form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .upload-dialog__header {
+  flex: 0 0 auto;
   padding: 20px 22px;
   background: #f8fafc;
+}
+
+.upload-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.upload-dialog .q-card__actions {
+  flex: 0 0 auto;
 }
 
 .upload-dialog__title {
@@ -1848,6 +1872,23 @@ export default {
 
 :deep(.professional-file-input .q-field__control) {
   min-height: 78px;
+}
+
+:deep(.professional-file-input .q-field__native) {
+  max-height: 220px;
+  overflow-y: auto;
+  align-content: flex-start;
+  padding-right: 4px;
+}
+
+:deep(.professional-file-input .q-chip) {
+  max-width: 100%;
+}
+
+:deep(.professional-file-input .q-chip__content) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Tarjeta móvil */

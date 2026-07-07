@@ -47,7 +47,7 @@
               <q-input v-model="form.description" label="Descripcion" type="textarea" outlined />
             </div>
             <div class="col-12">
-              <q-file v-model="file" label="Archivo" outlined clearable counter :disable="loading" />
+              <q-file v-model="file" label="Archivo" outlined clearable counter :disable="loading" :accept="acceptedFileExtensions" />
               <div v-if="directUploading" class="q-mt-md">
                 <div class="row items-center justify-between q-mb-xs">
                   <span class="text-caption text-grey-7">Subiendo directamente al almacenamiento externo</span>
@@ -69,6 +69,7 @@
 
 <script>
 import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+import { acceptedEvidenceExtensions } from 'src/utils/evidenceFiles'
 
 export default {
   name: 'EvidenceCreatePage',
@@ -78,6 +79,7 @@ export default {
       loading: false,
       directUploading: false,
       uploadProgress: 0,
+      acceptedFileExtensions: acceptedEvidenceExtensions,
       programs: [],
       cycles: [],
       criteria: [],

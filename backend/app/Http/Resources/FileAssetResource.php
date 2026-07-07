@@ -87,19 +87,27 @@ class FileAssetResource extends JsonResource
             return 'video';
         }
 
-        if (in_array($extension, ['doc', 'docx'], true)) {
+        if (in_array($extension, ['doc', 'docx', 'docm', 'dot', 'dotx', 'dotm', 'rtf', 'odt'], true)) {
             return 'document';
         }
 
-        if (in_array($extension, ['xls', 'xlsx'], true)) {
+        if (in_array($extension, ['xls', 'xlsx', 'xlsm', 'xlsb', 'xlt', 'xltx', 'xltm', 'csv', 'ods'], true)) {
             return 'spreadsheet';
         }
 
-        if (in_array($extension, ['ppt', 'pptx'], true)) {
+        if (in_array($extension, ['ppt', 'pptx', 'pptm', 'pps', 'ppsx', 'ppsm', 'pot', 'potx', 'potm', 'odp'], true)) {
             return 'presentation';
         }
 
-        if ($extension === 'zip') {
+        if (in_array($extension, ['mpp', 'mpt', 'mpx'], true)) {
+            return 'project';
+        }
+
+        if (in_array($extension, ['vsd', 'vsdx', 'vsdm', 'vss', 'vssx', 'vssm', 'vst', 'vstx', 'vstm', 'vdx', 'vsx', 'vtx'], true)) {
+            return 'diagram';
+        }
+
+        if (in_array($extension, ['zip', 'rar', '7z'], true)) {
             return 'archive';
         }
 

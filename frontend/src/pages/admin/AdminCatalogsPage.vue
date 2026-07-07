@@ -230,7 +230,7 @@
                 <q-input v-model="cvForm.description" label="Descripcion" type="textarea" outlined />
               </div>
               <div class="col-12">
-                <q-file v-model="cvForm.file" label="Archivo CV o soporte docente" outlined clearable counter :disable="cvSaving" :rules="[val => !!val || 'Selecciona un archivo']" />
+                <q-file v-model="cvForm.file" label="Archivo CV o soporte docente" outlined clearable counter :disable="cvSaving" :accept="acceptedFileExtensions" :rules="[val => !!val || 'Selecciona un archivo']" />
                 <div v-if="cvDirectUploading" class="q-mt-md">
                   <div class="row items-center justify-between q-mb-xs">
                     <span class="text-caption text-grey-7">Subiendo directamente al almacenamiento externo</span>
@@ -254,6 +254,7 @@
 
 <script>
 import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+import { acceptedEvidenceExtensions, allowedEvidenceExtensionsText } from 'src/utils/evidenceFiles'
 
 export default {
   name: 'AdminCatalogsPage',
@@ -267,6 +268,7 @@ export default {
       cvSaving: false,
       cvDirectUploading: false,
       cvUploadProgress: 0,
+      acceptedFileExtensions: acceptedEvidenceExtensions,
       consolidating: false,
       dialog: false,
       cvDialog: false,
@@ -1018,7 +1020,7 @@ export default {
         form.accreditation_subcriterion_id = this.optionsFor('subcriteria').length ? this.optionsFor('subcriteria')[0].value : ''
         form.applies_to = 'program'
         form.evidence_kind = 'record'
-        form.allowed_extensions_text = 'pdf, doc, docx, xls, xlsx, ppt, pptx, jpg, jpeg, png, mp4, zip'
+        form.allowed_extensions_text = allowedEvidenceExtensionsText
       }
 
       return form

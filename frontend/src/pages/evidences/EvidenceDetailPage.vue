@@ -6,7 +6,7 @@
         <q-btn v-if="can('review.evidences')" color="negative" outline icon="feedback" label="Observar" @click="openReviewDialog('observe')" />
         <q-btn v-if="can('validate.evidences')" color="positive" outline icon="verified" label="Validar" @click="openReviewDialog('validate')" />
         <q-btn v-if="can('approve.evidences')" color="green" outline icon="task_alt" label="Aprobar" @click="openReviewDialog('approve')" />
-        <q-btn v-if="can('create.evidences')" color="primary" icon="upload_file" label="Nueva version" @click="openVersionDialog" />
+        <q-btn v-if="can('create.evidences')" color="primary" icon="upload_file" label="Agregar archivo" @click="openVersionDialog" />
       </div>
     </div>
 
@@ -28,7 +28,7 @@
           <div class="col-12 col-md-4"><b>Programa:</b> {{ evidence.program ? evidence.program.name : '' }}</div>
           <div class="col-12 col-md-4"><b>Ciclo:</b> {{ evidence.cycle ? evidence.cycle.name : '' }}</div>
           <div class="col-12 col-md-4"><b>Criterio:</b> {{ evidence.criterion ? evidence.criterion.code + ' - ' + evidence.criterion.name : '' }}</div>
-          <div class="col-12 col-md-4"><b>Version:</b> {{ evidence.version_number }}</div>
+          <div class="col-12 col-md-4"><b>Archivos:</b> {{ evidence.version_number }}</div>
           <div class="col-12 col-md-4"><b>Docente:</b> {{ evidence.teacher ? evidence.teacher.first_name + ' ' + evidence.teacher.last_name : 'No asignado' }}</div>
           <div class="col-12 col-md-4"><b>Fecha:</b> {{ formatDate(evidence.submitted_at) }}</div>
         </div>
@@ -109,15 +109,15 @@
     <div class="row q-col-gutter-md" v-if="evidence">
       <div class="col-12 col-md-6">
         <q-card>
-          <q-card-section><div class="text-h6">Versiones</div></q-card-section>
+          <q-card-section><div class="text-h6">Archivos / documentos</div></q-card-section>
           <q-list separator>
             <q-item v-for="version in evidence.versions" :key="version.id">
               <q-item-section avatar>
                 <q-icon :name="fileIcon(version.file)" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>Version {{ version.version_number }}</q-item-label>
-                <q-item-label caption>{{ version.change_summary }}</q-item-label>
+                <q-item-label>Documento {{ version.version_number }}</q-item-label>
+                <q-item-label caption>{{ documentCaption(version) }}</q-item-label>
                 <q-item-label caption>{{ version.file ? version.file.original_name : '' }}</q-item-label>
               </q-item-section>
               <q-item-section side v-if="version.file">
@@ -131,7 +131,7 @@
                     target="_blank"
                     :disable="!version.file.preview_url"
                   >
-                    <q-tooltip>Abrir version</q-tooltip>
+                    <q-tooltip>Abrir archivo</q-tooltip>
                   </q-btn>
                   <q-btn
                     flat
@@ -142,7 +142,7 @@
                     target="_blank"
                     :disable="!version.file.download_url && !version.file.preview_url"
                   >
-                    <q-tooltip>Descargar version</q-tooltip>
+                    <q-tooltip>Descargar archivo</q-tooltip>
                   </q-btn>
                 </div>
               </q-item-section>
@@ -186,10 +186,10 @@
 
     <q-dialog v-model="versionDialog">
       <q-card class="dialog-card">
-        <q-card-section><div class="text-h6">Nueva version</div></q-card-section>
+        <q-card-section><div class="text-h6">Agregar archivo o documento</div></q-card-section>
         <q-card-section>
-          <q-input v-model="version.change_summary" label="Resumen de cambios" type="textarea" outlined class="q-mb-md" />
-          <q-file v-model="version.file" label="Archivo" outlined clearable :disable="saving" />
+          <q-input v-model="version.change_summary" label="Descripcion del archivo" type="textarea" outlined class="q-mb-md" />
+          <q-file v-model="version.file" label="Archivo" outlined clearable :disable="saving" :accept="acceptedFileExtensions" />
           <div v-if="directUploading" class="q-mt-md">
             <div class="row items-center justify-between q-mb-xs">
               <span class="text-caption text-grey-7">Subiendo directamente al almacenamiento externo</span>
@@ -210,6 +210,7 @@
 <script>
 import { getStoredUser } from 'src/utils/auth'
 import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+import { acceptedEvidenceExtensions } from 'src/utils/evidenceFiles'
 
 export default {
   name: 'EvidenceDetailPage',
@@ -220,6 +221,7 @@ export default {
       saving: false,
       directUploading: false,
       uploadProgress: 0,
+      acceptedFileExtensions: acceptedEvidenceExtensions,
       evidence: null,
       reviewDialog: false,
       review: {
@@ -311,11 +313,11 @@ export default {
           })
         }
 
-        this.$q.notify({ type: 'positive', message: 'Version registrada' })
+        this.$q.notify({ type: 'positive', message: 'Archivo registrado' })
         this.versionDialog = false
         this.loadEvidence()
       } catch (error) {
-        const message = error.response?.data?.message || 'No se pudo subir la version'
+        const message = error.response?.data?.message || 'No se pudo subir el archivo'
         this.$q.notify({ type: 'negative', message })
       } finally {
         this.saving = false
@@ -387,6 +389,14 @@ export default {
       return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`
     },
 
+    documentCaption (version) {
+      if (version.version_number === 1) {
+        return 'Archivo inicial.'
+      }
+
+      return version.change_summary || 'Archivo adicional cargado.'
+    },
+
     fileIcon (file) {
       const type = file?.file_type
       const map = {
@@ -396,6 +406,8 @@ export default {
         document: 'article',
         spreadsheet: 'table_chart',
         presentation: 'slideshow',
+        project: 'account_tree',
+        diagram: 'schema',
         archive: 'folder_zip'
       }
 

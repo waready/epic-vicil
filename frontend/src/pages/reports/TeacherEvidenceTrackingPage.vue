@@ -496,6 +496,8 @@ export default {
         document: 'description',
         spreadsheet: 'table_view',
         presentation: 'slideshow',
+        project: 'account_tree',
+        diagram: 'schema',
         archive: 'folder_zip'
       }[file?.file_type] || 'draft'
     },

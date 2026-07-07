@@ -4,7 +4,7 @@
       <div>
         <div class="page-kicker">Repositorio documental</div>
         <div class="page-title">Evidencias</div>
-        <div class="page-subtitle">Repositorio de entregas, versiones y revision por criterio.</div>
+        <div class="page-subtitle">Repositorio de entregas, archivos y revision por criterio.</div>
       </div>
       <q-btn v-if="can('create.evidences')" color="primary" icon="add" label="Subir evidencia" unelevated to="/evidences/create" />
     </div>
@@ -59,7 +59,7 @@
             <q-tooltip>Ver detalle</q-tooltip>
           </q-btn>
           <q-btn v-if="can('create.evidences')" dense flat round icon="upload_file" color="secondary" @click="openVersionDialog(props.row)">
-            <q-tooltip>Subir nueva version</q-tooltip>
+            <q-tooltip>Agregar archivo o documento</q-tooltip>
           </q-btn>
           <q-btn v-if="can('review.evidences')" dense flat round icon="feedback" color="negative" @click="openReviewDialog(props.row, 'observe')">
             <q-tooltip>Observar</q-tooltip>
@@ -92,11 +92,11 @@
     <q-dialog v-model="versionDialog">
       <q-card class="dialog-card">
         <q-card-section>
-          <div class="text-h6">Nueva version</div>
+          <div class="text-h6">Agregar archivo o documento</div>
         </q-card-section>
         <q-card-section>
-          <q-input v-model="version.change_summary" label="Resumen de cambios" type="textarea" outlined class="q-mb-md" />
-          <q-file v-model="version.file" label="Archivo" outlined clearable :disable="saving" />
+          <q-input v-model="version.change_summary" label="Descripcion del archivo" type="textarea" outlined class="q-mb-md" />
+          <q-file v-model="version.file" label="Archivo" outlined clearable :disable="saving" :accept="acceptedFileExtensions" />
           <div v-if="directUploading" class="q-mt-md">
             <div class="row items-center justify-between q-mb-xs">
               <span class="text-caption text-grey-7">Subiendo directamente al almacenamiento externo</span>
@@ -117,6 +117,7 @@
 <script>
 import { getStoredUser } from 'src/utils/auth'
 import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+import { acceptedEvidenceExtensions } from 'src/utils/evidenceFiles'
 
 export default {
   name: 'EvidenceListPage',
@@ -127,6 +128,7 @@ export default {
       saving: false,
       directUploading: false,
       uploadProgress: 0,
+      acceptedFileExtensions: acceptedEvidenceExtensions,
       rows: [],
       programs: [],
       cycles: [],
@@ -175,7 +177,7 @@ export default {
         { name: 'requirement', label: 'Requerimiento', field: row => row.requirement ? row.requirement.name : '', align: 'left' },
         { name: 'responsible', label: 'Responsable', field: row => row.teacher ? `${row.teacher.first_name} ${row.teacher.last_name}` : (row.submitted_by ? row.submitted_by.name : ''), align: 'left' },
         { name: 'status', label: 'Estado', field: 'status', align: 'center' },
-        { name: 'version_number', label: 'Version', field: 'version_number', align: 'center' },
+        { name: 'version_number', label: 'Archivos', field: 'version_number', align: 'center' },
         { name: 'submitted_at', label: 'Fecha', field: row => this.formatDate(row.submitted_at), align: 'left', sortable: true },
         { name: 'actions', label: 'Acciones', align: 'center' }
       ]
@@ -319,11 +321,11 @@ export default {
           })
         }
 
-        this.$q.notify({ type: 'positive', message: 'Version registrada' })
+        this.$q.notify({ type: 'positive', message: 'Archivo registrado' })
         this.versionDialog = false
         this.loadEvidences()
       } catch (error) {
-        const message = error.response?.data?.message || 'No se pudo subir la version'
+        const message = error.response?.data?.message || 'No se pudo subir el archivo'
         this.$q.notify({ type: 'negative', message })
       } finally {
         this.saving = false

@@ -377,7 +377,7 @@ class AdminCatalogController extends Controller
             'accreditation_cycle_id' => ['required', 'exists:accreditation_cycles,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'file' => ['required_without:file_asset_id', 'file', 'max:'.$maxKb, 'mimes:'.implode(',', config('accreditation.allowed_extensions'))],
+            'file' => ['required_without:file_asset_id', 'file', 'max:'.$maxKb, 'extensions:'.implode(',', config('accreditation.allowed_extensions'))],
             'file_asset_id' => ['required_without:file', 'nullable', 'exists:file_assets,id'],
         ]);
 

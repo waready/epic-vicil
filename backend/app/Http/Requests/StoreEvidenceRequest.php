@@ -28,7 +28,7 @@ class StoreEvidenceRequest extends FormRequest
             'teacher_id' => ['nullable', 'exists:teachers,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'file' => ['required_without:file_asset_id', 'file', 'max:'.$maxKb, 'mimes:'.implode(',', $extensions)],
+            'file' => ['required_without:file_asset_id', 'file', 'max:'.$maxKb, 'extensions:'.implode(',', $extensions)],
             'file_asset_id' => ['required_without:file', 'nullable', 'exists:file_assets,id'],
         ];
     }
