@@ -7,7 +7,7 @@ return [
     'direct_upload_enabled' => (bool) env('EVIDENCE_DIRECT_UPLOAD_ENABLED', true),
     'direct_upload_disk' => env('EVIDENCE_DIRECT_UPLOAD_DISK', 's3'),
     'direct_upload_max_mb' => (int) env('EVIDENCE_DIRECT_UPLOAD_MAX_MB', 2048),
-    'direct_upload_threshold_mb' => (int) env('EVIDENCE_DIRECT_UPLOAD_THRESHOLD_MB', 100),
+    'direct_upload_threshold_mb' => (int) env('EVIDENCE_DIRECT_UPLOAD_THRESHOLD_MB', 15),
     'direct_upload_expiration_minutes' => (int) env('EVIDENCE_DIRECT_UPLOAD_EXPIRATION_MINUTES', 15),
     'video_transcoding_enabled' => (bool) env('EVIDENCE_VIDEO_TRANSCODING_ENABLED', false),
     'ffmpeg_binary' => env('FFMPEG_BINARY', 'ffmpeg'),

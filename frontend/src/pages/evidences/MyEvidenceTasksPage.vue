@@ -698,7 +698,7 @@
 </template>
 
 <script>
-import { canFallbackToServer, uploadDirectFile } from 'src/utils/directUpload'
+import { canFallbackToServer, shouldUseDirectUploadForFiles, uploadDirectFile } from 'src/utils/directUpload'
 import { acceptedEvidenceExtensions } from 'src/utils/evidenceFiles'
 
 export default {
@@ -1090,7 +1090,7 @@ export default {
         const files = Array.from(this.uploadForm.files)
         let response = null
 
-        if (files.some(file => this.shouldUseDirectUpload(file))) {
+        if (shouldUseDirectUploadForFiles(files)) {
           try {
             const fileAssetIds = []
 
@@ -1163,11 +1163,6 @@ export default {
           }
         }
       )
-    },
-
-    shouldUseDirectUpload (file) {
-      const thresholdBytes = 100 * 1024 * 1024
-      return file.size >= thresholdBytes || (file.type || '').startsWith('video/')
     },
 
     canFallbackToServer (files, error) {
