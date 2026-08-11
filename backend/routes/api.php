@@ -126,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/evidence-requirements/{requirement}', [AdminCatalogController::class, 'destroyEvidenceRequirement']);
 
         Route::get('/teacher-evidence-tracking', [TeacherEvidenceTrackingController::class, 'summary']);
+        Route::post('/teacher-evidence-tracking/send-emails', [TeacherEvidenceTrackingController::class, 'sendStatusEmails']);
         Route::get('/teacher-evidence-tracking/{user}/tasks', [TeacherEvidenceTrackingController::class, 'tasks']);
     });
 
@@ -158,4 +159,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my/evidence-tasks', [MyEvidenceController::class, 'tasks']);
 
     Route::post('/exports/evidences-zip', [ExportController::class, 'evidencesZip'])->middleware('permission:export.evidences');
+    Route::post('/exports/syllabi-zip', [ExportController::class, 'syllabiZip'])->middleware('permission:export.evidences');
+    Route::get('/exports/{exportJob}/download', [ExportController::class, 'download'])->middleware('permission:export.evidences');
 });

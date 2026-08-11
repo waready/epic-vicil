@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EvidenceTaskResource;
+use App\Mail\TeacherEvidenceStatusMail;
+use App\Models\AccreditationCycle;
 use App\Models\EvidenceTask;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class TeacherEvidenceTrackingController extends Controller
@@ -160,5 +163,163 @@ class TeacherEvidenceTrackingController extends Controller
                 'teacher_id' => $user->teacher()->value('id'),
             ],
         ]);
+    }
+
+    public function sendStatusEmails(Request $request)
+    {
+        $data = $request->validate([
+            'cycle_id' => ['nullable', 'integer', 'exists:accreditation_cycles,id'],
+            'program_id' => ['nullable', 'integer', 'exists:programs,id'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['integer', 'exists:users,id'],
+            'only_missing' => ['boolean'],
+        ]);
+
+        $onlyMissing = $data['only_missing'] ?? true;
+        $taskUserIds = EvidenceTask::query()
+            ->whereNotNull('assigned_to')
+            ->when($data['cycle_id'] ?? null, fn ($builder, $cycleId) => $builder->where('accreditation_cycle_id', $cycleId))
+            ->when($data['program_id'] ?? null, fn ($builder, $programId) => $builder->where('program_id', $programId))
+            ->when($data['user_ids'] ?? null, fn ($builder, $ids) => $builder->whereIn('assigned_to', $ids))
+            ->pluck('assigned_to')
+            ->unique()
+            ->values();
+
+        $users = User::query()
+            ->with('teacher')
+            ->whereIn('id', $taskUserIds)
+            ->where('is_active', true)
+            ->whereNotNull('email')
+            ->orderBy('name')
+            ->get();
+
+        $sent = [];
+        $skipped = [];
+        $failed = [];
+
+        foreach ($users as $user) {
+            if (! $user->teacher) {
+                $skipped[] = ['email' => $user->email, 'reason' => 'No es docente.'];
+                continue;
+            }
+
+            $summary = $this->teacherMailSummary($user, $data);
+            if ($onlyMissing && $summary['missing'] === 0) {
+                $skipped[] = ['email' => $user->email, 'reason' => 'Sin evidencias faltantes.'];
+                continue;
+            }
+
+            $missingTasks = $this->teacherMissingTasks($user, $data);
+
+            try {
+                Mail::to($user->email)->send(new TeacherEvidenceStatusMail($summary, $missingTasks));
+                $sent[] = ['email' => $user->email, 'missing' => $summary['missing']];
+            } catch (\Throwable $exception) {
+                $failed[] = ['email' => $user->email, 'error' => $exception->getMessage()];
+            }
+        }
+
+        return response()->json([
+            'message' => 'Proceso de envio de correos finalizado.',
+            'summary' => [
+                'sent' => count($sent),
+                'skipped' => count($skipped),
+                'failed' => count($failed),
+            ],
+            'sent' => $sent,
+            'skipped' => $skipped,
+            'failed' => $failed,
+        ]);
+    }
+
+    private function teacherMailSummary(User $user, array $filters): array
+    {
+        $base = $this->teacherTaskQuery($user, $filters);
+        $total = (clone $base)->count();
+        $submitted = (clone $base)->whereHas('submissions')->count();
+        $missing = max($total - $submitted, 0);
+        $observed = (clone $base)->where('status', 'observed')->count();
+        $accepted = (clone $base)->whereIn('status', ['validated', 'approved', 'ready_to_export'])->count();
+        $cycle = $this->mailCycleLabel($filters['cycle_id'] ?? null);
+        $program = (clone $base)->with('program:id,name')->first()?->program?->name ?: 'Programa academico';
+
+        return [
+            'teacher' => $user->name,
+            'email' => $user->email,
+            'cycle' => $cycle,
+            'program' => $program,
+            'total' => $total,
+            'submitted' => $submitted,
+            'missing' => $missing,
+            'observed' => $observed,
+            'accepted' => $accepted,
+            'progress' => $total > 0 ? round(($submitted / $total) * 100, 2) : 0,
+        ];
+    }
+
+    private function teacherMissingTasks(User $user, array $filters): array
+    {
+        return $this->teacherTaskQuery($user, $filters)
+            ->whereDoesntHave('submissions')
+            ->with([
+                'cycle.model',
+                'cycle.term',
+                'criterion',
+                'subcriterion',
+                'requirement',
+                'courseOfferingContext.course',
+                'courseOfferingContext.term',
+                'teacherContext',
+            ])
+            ->orderBy('accreditation_criterion_id')
+            ->orderBy('context_type')
+            ->orderBy('context_id')
+            ->orderBy('evidence_requirement_id')
+            ->get()
+            ->map(fn (EvidenceTask $task) => [
+                'context' => $this->taskContextLabel($task),
+                'criterion' => trim(($task->criterion?->code ?: '').' - '.($task->criterion?->name ?: '')),
+                'subcriterion' => trim(($task->subcriterion?->code ?: '').' - '.($task->subcriterion?->name ?: '')),
+                'code' => $task->requirement?->code ?: 'Sin codigo',
+                'name' => $task->requirement?->name ?: 'Sin requerimiento',
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function teacherTaskQuery(User $user, array $filters)
+    {
+        return EvidenceTask::query()
+            ->where('assigned_to', $user->id)
+            ->when($filters['cycle_id'] ?? null, fn ($builder, $cycleId) => $builder->where('accreditation_cycle_id', $cycleId))
+            ->when($filters['program_id'] ?? null, fn ($builder, $programId) => $builder->where('program_id', $programId));
+    }
+
+    private function mailCycleLabel(?int $cycleId): string
+    {
+        $cycle = $cycleId
+            ? AccreditationCycle::query()->with(['model:id,code', 'term:id,code'])->find($cycleId)
+            : AccreditationCycle::query()->with(['model:id,code', 'term:id,code'])->where('status', 'active')->first();
+
+        return trim(($cycle?->model?->code ?: 'ICACIT').' '.($cycle?->term?->code ?: $cycle?->name));
+    }
+
+    private function taskContextLabel(EvidenceTask $task): string
+    {
+        if (in_array($task->context_type, ['course_offering', 'assessment_course'], true) && $task->courseOfferingContext) {
+            $course = $task->courseOfferingContext->course;
+            $term = $task->courseOfferingContext->term;
+            $assessment = $task->context_type === 'assessment_course'
+                ? trim(($task->courseOfferingContext->assessment_result_code ?: '').' '.$task->courseOfferingContext->assessment_result_name)
+                : '';
+
+            return trim(($course ? $course->code.' - '.$course->name : 'Curso').' / '.($term ? $term->code : '').' / '.$task->courseOfferingContext->section.($assessment ? ' / '.$assessment : ''));
+        }
+
+        if ($task->context_type === 'teacher' && $task->teacherContext) {
+            return trim($task->teacherContext->last_name.', '.$task->teacherContext->first_name);
+        }
+
+        return 'Evidencia institucional';
     }
 }

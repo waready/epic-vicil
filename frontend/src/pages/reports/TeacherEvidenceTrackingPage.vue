@@ -6,7 +6,10 @@
         <div class="page-title">Seguimiento de evidencias por docente</div>
         <div class="page-subtitle">Consulta responsabilidades, documentos enviados y pendientes por curso.</div>
       </div>
-      <q-btn color="primary" icon="refresh" label="Actualizar" unelevated :loading="loadingTeachers" @click="refreshAll" />
+      <div class="header-actions">
+        <q-btn color="secondary" icon="outgoing_mail" label="Enviar correos" unelevated :loading="sendingEmails" @click="confirmSendStatusEmails()" />
+        <q-btn color="primary" icon="refresh" label="Actualizar" unelevated :loading="loadingTeachers" @click="refreshAll" />
+      </div>
     </div>
 
     <section class="tracking-filters">
@@ -98,7 +101,10 @@
         </template>
 
         <template v-slot:body-cell-actions="props">
-          <q-td :props="props">
+          <q-td :props="props" class="q-gutter-xs">
+            <q-btn round flat color="secondary" icon="mail" :loading="emailSendingTo === props.row.user_id" @click="confirmSendStatusEmails(props.row)">
+              <q-tooltip>Enviar estado al correo institucional</q-tooltip>
+            </q-btn>
             <q-btn round flat color="primary" icon="manage_search" @click="selectTeacher(props.row)">
               <q-tooltip>Ver evidencias asignadas</q-tooltip>
             </q-btn>
@@ -299,6 +305,8 @@ export default {
     return {
       loadingTeachers: false,
       loadingTasks: false,
+      sendingEmails: false,
+      emailSendingTo: null,
       teachers: [],
       tasks: [],
       cycles: [],
@@ -431,6 +439,43 @@ export default {
     refreshAll () {
       this.loadTeachers()
       if (this.selectedTeacher) this.loadTasks()
+    },
+
+    confirmSendStatusEmails (teacher = null) {
+      const target = teacher
+        ? `${teacher.name} (${teacher.email})`
+        : 'todos los docentes con evidencias faltantes segun los filtros actuales'
+
+      this.$q.dialog({
+        title: 'Enviar estado por correo',
+        message: `Se enviara el estado de cumplimiento a ${target}.`,
+        cancel: true,
+        persistent: true
+      }).onOk(() => this.sendStatusEmails(teacher))
+    },
+
+    async sendStatusEmails (teacher = null) {
+      this.sendingEmails = !teacher
+      this.emailSendingTo = teacher ? teacher.user_id : null
+      try {
+        const response = await this.$api.post('/admin/teacher-evidence-tracking/send-emails', {
+          cycle_id: this.filters.cycle_id,
+          program_id: this.filters.program_id,
+          user_ids: teacher ? [teacher.user_id] : null,
+          only_missing: true
+        })
+        const summary = response.data.summary || {}
+        this.$q.notify({
+          type: summary.failed > 0 ? 'warning' : 'positive',
+          message: `Correos enviados: ${summary.sent || 0}. Omitidos: ${summary.skipped || 0}. Fallidos: ${summary.failed || 0}.`
+        })
+      } catch (error) {
+        const message = error.response?.data?.message || 'No se pudieron enviar los correos'
+        this.$q.notify({ type: 'negative', message })
+      } finally {
+        this.sendingEmails = false
+        this.emailSendingTo = null
+      }
     },
 
     onTeacherRequest ({ pagination }) {
@@ -572,6 +617,13 @@ export default {
   align-items: center;
   gap: 12px;
   min-width: 220px;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .status-count {

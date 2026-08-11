@@ -462,14 +462,14 @@ export default {
           columns: [
             { name: 'code', label: 'Codigo', field: 'code', align: 'left', sortable: true },
             { name: 'name', label: 'Curso', field: 'name', align: 'left', sortable: true },
-            { name: 'plan', label: 'Plan', field: row => row.study_plan ? row.study_plan.code : '', align: 'left' },
+            { name: 'plan', label: 'Plan', field: row => row.study_plan ? `${row.study_plan.code || 'Plan'} - ${row.study_plan.name}` : '', align: 'left' },
             { name: 'cycle_number', label: 'Ciclo', field: 'cycle_number', align: 'center' },
             { name: 'credits', label: 'Creditos', field: 'credits', align: 'center' },
             { name: 'is_active', label: 'Estado', field: 'is_active', align: 'center' },
             { name: 'actions', label: 'Acciones', align: 'center' }
           ],
           fields: [
-            { name: 'study_plan_id', label: 'Plan de estudios', type: 'select', options: 'studyPlans', required: true },
+            { name: 'study_plan_id', label: 'Plan de estudios / curricula', type: 'select', options: 'studyPlans', required: true, class: 'col-12' },
             { name: 'code', label: 'Codigo', required: true },
             { name: 'name', label: 'Nombre', required: true, class: 'col-12' },
             { name: 'cycle_number', label: 'Ciclo', type: 'number' },
@@ -766,7 +766,10 @@ export default {
 
         if (name === 'studyPlans') {
           const response = await this.$api.get('/admin/study-plans')
-          this.optionSets.studyPlans = response.data.map(item => ({ label: `${item.code || 'Plan'} - ${item.name}`, value: item.id }))
+          this.optionSets.studyPlans = response.data.map(item => ({
+            label: `${item.program ? item.program.code + ' / ' : ''}${item.code || 'Plan'} - ${item.name}${item.year ? ' (' + item.year + ')' : ''}${item.is_current ? ' - vigente' : ''}`,
+            value: item.id
+          }))
         }
 
         if (name === 'users') {
