@@ -86,10 +86,11 @@ return new class extends Migration {
                 ->where('code', $requirementCode)
                 ->first();
 
+            $requirementName = trim($row['requirement_name']);
             $requirementPayload = [
                 'accreditation_subcriterion_id' => $subcriterionId,
-                'name' => trim($row['requirement_name']),
-                'description' => $this->description($row),
+                'name' => $this->shortName($requirementName),
+                'description' => $this->description($row, $requirementName),
                 'applies_to' => 'program',
                 'evidence_kind' => $groupCode === 'DOC' ? 'normative' : 'record',
                 'is_required' => true,
@@ -147,9 +148,22 @@ return new class extends Migration {
         return $rows;
     }
 
-    private function description(array $row): ?string
+    private function shortName(string $name): string
+    {
+        if (mb_strlen($name) <= 250) {
+            return $name;
+        }
+
+        return rtrim(mb_substr($name, 0, 247)).'...';
+    }
+
+    private function description(array $row, string $fullName): ?string
     {
         $parts = ['Fuente: HR 30-06-2026, fila '.$row['source_row'].'.'];
+
+        if (mb_strlen($fullName) > 250) {
+            $parts[] = 'Texto completo: '.$fullName;
+        }
 
         if (! empty($row['note'])) {
             $parts[] = 'Nota: '.$row['note'];
