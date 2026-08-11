@@ -128,7 +128,7 @@ return new class extends Migration {
     {
         $handle = fopen($path, 'rb');
         $headers = fgetcsv($handle);
-        $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', $headers[0]);
+        $headers[0] = ltrim($headers[0], "\xEF\xBB\xBF");
         $rows = [];
 
         while (($values = fgetcsv($handle)) !== false) {
