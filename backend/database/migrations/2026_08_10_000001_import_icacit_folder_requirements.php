@@ -128,7 +128,10 @@ return new class extends Migration {
     {
         $handle = fopen($path, 'rb');
         $headers = fgetcsv($handle);
-        $headers[0] = ltrim($headers[0], "\xEF\xBB\xBF");
+        $headers = array_map(
+            fn ($header) => trim(ltrim((string) $header, "\xEF\xBB\xBF"), "\"' \t\n\r\0\x0B"),
+            $headers
+        );
         $rows = [];
 
         while (($values = fgetcsv($handle)) !== false) {
