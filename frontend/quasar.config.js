@@ -1,6 +1,12 @@
 import { configure } from 'quasar/wrappers'
 
 export default configure(function () {
+  const apiUrl = process.env.API_URL || (
+    process.env.NODE_ENV === 'production'
+      ? 'https://waready.org.pe/api'
+      : 'http://localhost:8000/api'
+  )
+
   return {
     boot: ['axios'],
     css: ['app.scss'],
@@ -8,7 +14,7 @@ export default configure(function () {
     build: {
       vueRouterMode: 'history',
       env: {
-        API_URL: process.env.API_URL || 'http://localhost:8000/api'
+        API_URL: apiUrl
       }
     },
     devServer: {
