@@ -69,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users', [AdminCatalogController::class, 'users']);
         Route::post('/users', [AdminCatalogController::class, 'storeUser']);
         Route::put('/users/{user}', [AdminCatalogController::class, 'updateUser']);
+        Route::post('/users/{user}/reset-password', [AdminCatalogController::class, 'resetUserPassword']);
         Route::delete('/users/{user}', [AdminCatalogController::class, 'destroyUser']);
         Route::get('/roles', [AdminCatalogController::class, 'roles']);
 

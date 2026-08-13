@@ -91,7 +91,7 @@ class AdminCatalogController extends Controller
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'],
+            'password' => Hash::make('password'),
             'is_active' => $data['is_active'] ?? true,
             'must_change_password' => true,
             'password_changed_at' => null,
@@ -111,22 +111,37 @@ class AdminCatalogController extends Controller
             'is_active' => $data['is_active'] ?? true,
         ];
 
-        if (! empty($data['password'])) {
-            $updates['password'] = $data['password'];
-            $updates['must_change_password'] = true;
-            $updates['password_changed_at'] = null;
-            $user->tokens()->delete();
-        }
-
         $user->update($updates);
         $user->syncRoles($data['role_names'] ?? []);
 
         return response()->json($user->fresh('roles:id,name'));
     }
 
+    public function resetUserPassword(Request $request, User $user)
+    {
+        $currentUser = $request->user();
+
+        if ($currentUser && $currentUser->id === $user->id) {
+            abort(422, 'No puedes restablecer tu propia clave desde este modulo. Usa Mi perfil para cambiarla.');
+        }
+
+        $user->update([
+            'password' => Hash::make('password'),
+            'must_change_password' => true,
+            'password_changed_at' => null,
+        ]);
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Acceso restablecido. La clave temporal es password y el usuario debera cambiarla al ingresar.',
+        ]);
+    }
+
     public function destroyUser(Request $request, User $user)
     {
-        if ($request->user()?->id === $user->id) {
+        $currentUser = $request->user();
+
+        if ($currentUser && $currentUser->id === $user->id) {
             abort(422, 'No puedes eliminar tu propia cuenta activa.');
         }
 
@@ -689,7 +704,6 @@ class AdminCatalogController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user?->id),
             ],
-            'password' => [$user ? 'nullable' : 'required', 'string', 'min:6', 'max:120'],
             'is_active' => ['boolean'],
             'role_names' => ['required', 'array', 'min:1'],
             'role_names.*' => ['required', 'string', Rule::exists('roles', 'name')],

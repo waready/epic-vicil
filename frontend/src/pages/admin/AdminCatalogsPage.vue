@@ -88,6 +88,9 @@
             >
               <q-tooltip>Consolidar con otro requerimiento</q-tooltip>
             </q-btn>
+            <q-btn v-if="activeTab === 'users'" dense flat round icon="lock_reset" color="secondary" @click="confirmPasswordReset(props.row)">
+              <q-tooltip>Restablecer acceso con clave temporal</q-tooltip>
+            </q-btn>
             <q-btn dense flat round icon="edit" color="primary" @click="openEdit(props.row)">
               <q-tooltip>Editar</q-tooltip>
             </q-btn>
@@ -339,7 +342,7 @@ export default {
           title: 'Usuarios del sistema',
           icon: 'manage_accounts',
           endpoint: '/admin/users',
-          help: 'Crea cuentas, asigna roles y define la contrasena inicial de acceso.',
+          help: 'Crea cuentas y asigna roles. Las nuevas cuentas reciben la clave temporal password y deben cambiarla al ingresar.',
           columns: [
             { name: 'name', label: 'Usuario', field: 'name', align: 'left', sortable: true },
             { name: 'email', label: 'Correo', field: 'email', align: 'left', sortable: true },
@@ -350,8 +353,6 @@ export default {
           fields: [
             { name: 'name', label: 'Nombre completo', required: true, class: 'col-12 col-md-6' },
             { name: 'email', label: 'Correo', type: 'email', required: true, class: 'col-12 col-md-6' },
-            { name: 'password', label: 'Password inicial', type: 'password', required: true, createOnly: true },
-            { name: 'password', label: 'Nuevo password', type: 'password', editOnly: true },
             { name: 'role_names', label: 'Roles', type: 'select', options: 'roles', multiple: true, required: true, class: 'col-12' },
             { name: 'is_active', label: 'Activo', type: 'toggle', default: true }
           ]
@@ -908,7 +909,6 @@ export default {
       })
       if (this.activeTab === 'users') {
         form.role_names = (row.roles || []).map(role => role.name)
-        form.password = ''
       }
       if (form.approved_on && typeof form.approved_on === 'string') {
         form.approved_on = form.approved_on.slice(0, 10)
@@ -1043,7 +1043,6 @@ export default {
         }
       })
 
-      if (!data.password) delete data.password
       if (this.activeTab === 'evidenceRequirements') {
         data.allowed_extensions = (this.form.allowed_extensions_text || '')
           .split(',')
@@ -1089,6 +1088,27 @@ export default {
         cancel: true,
         persistent: true
       }).onOk(() => this.remove(row))
+    },
+
+    confirmPasswordReset (row) {
+      this.$q.dialog({
+        title: 'Restablecer acceso',
+        message: `Se cerraran las sesiones de ${row.name}. Su clave temporal sera password y debera cambiarla al iniciar sesion.`,
+        cancel: true,
+        persistent: true,
+        ok: { label: 'Restablecer', color: 'primary' }
+      }).onOk(() => this.resetUserPassword(row))
+    },
+
+    async resetUserPassword (row) {
+      try {
+        const response = await this.$api.post(`/admin/users/${row.id}/reset-password`)
+        this.$q.notify({ type: 'positive', message: response.data.message || 'Acceso restablecido' })
+        await this.loadRows()
+      } catch (error) {
+        const message = error.response?.data?.message || 'No se pudo restablecer el acceso'
+        this.$q.notify({ type: 'negative', message })
+      }
     },
 
     async openCvDialog (teacher) {
@@ -1197,21 +1217,16 @@ export default {
 
       this.$q.dialog({
         title: 'Crear cuenta docente',
-        message: `Se creara acceso para ${teacher.last_name}, ${teacher.first_name}. Si dejas el campo vacio se usara password.`,
-        prompt: {
-          model: '',
-          type: 'password',
-          label: 'Password inicial'
-        },
+        message: `Se creara acceso para ${teacher.last_name}, ${teacher.first_name} con la clave temporal password. El docente debera cambiarla al ingresar.`,
         cancel: true,
-        persistent: true
-      }).onOk(async password => {
+        persistent: true,
+        ok: { label: 'Crear cuenta', color: 'primary' }
+      }).onOk(async () => {
         try {
           await this.$api.post(`/admin/teachers/${teacher.id}/user`, {
-            email: teacher.email,
-            password: password || 'password'
+            email: teacher.email
           })
-          this.$q.notify({ type: 'positive', message: 'Cuenta docente creada' })
+          this.$q.notify({ type: 'positive', message: 'Cuenta docente creada con clave temporal password' })
           this.optionLoaded.users = false
           this.optionLoaded.teachers = false
           await this.loadOptionsForActive()
