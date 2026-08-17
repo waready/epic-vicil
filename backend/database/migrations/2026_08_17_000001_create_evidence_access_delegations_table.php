@@ -16,8 +16,8 @@ return new class extends Migration
             $table->timestamp('expires_at')->nullable()->index();
             $table->timestamps();
 
-            $table->unique(['delegate_user_id', 'source_user_id']);
-            $table->index(['delegate_user_id', 'expires_at']);
+            $table->unique(['delegate_user_id', 'source_user_id'], 'ev_access_delegate_source_unique');
+            $table->index(['delegate_user_id', 'expires_at'], 'ev_access_delegate_expires_idx');
         });
     }
 
