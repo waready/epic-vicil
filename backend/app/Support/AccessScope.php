@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\CourseAssignment;
+use App\Models\EvidenceAccessDelegation;
 use App\Models\EvidenceSubmission;
 use App\Models\EvidenceTask;
 use App\Models\Teacher;
@@ -35,20 +36,24 @@ class AccessScope
             return $query;
         }
 
-        $teacher = self::teacherForUser($user);
+        $visibleUserIds = self::visibleUserIds($user);
+        $teacherIds = self::teacherIdsForUsers($visibleUserIds);
 
-        if (! $teacher) {
+        if ($visibleUserIds->isEmpty() && $teacherIds->isEmpty()) {
             return $query->whereRaw('1 = 0');
         }
 
-        $courseOfferingIds = self::courseOfferingIdsForTeacher($teacher);
+        $courseOfferingIds = self::courseOfferingIdsForTeachers($teacherIds);
 
-        return $query->where(function (Builder $inner) use ($user, $teacher, $courseOfferingIds) {
-            $inner->where('assigned_to', $user->id)
-                ->orWhere(function (Builder $teacherQuery) use ($teacher) {
+        return $query->where(function (Builder $inner) use ($visibleUserIds, $teacherIds, $courseOfferingIds) {
+            $inner->whereIn('assigned_to', $visibleUserIds);
+
+            if ($teacherIds->isNotEmpty()) {
+                $inner->orWhere(function (Builder $teacherQuery) use ($teacherIds) {
                     $teacherQuery->where('context_type', 'teacher')
-                        ->where('context_id', $teacher->id);
+                        ->whereIn('context_id', $teacherIds);
                 });
+            }
 
             if ($courseOfferingIds->isNotEmpty()) {
                 $inner->orWhere(function (Builder $courseQuery) use ($courseOfferingIds) {
@@ -65,15 +70,21 @@ class AccessScope
             return $query;
         }
 
-        $teacher = self::teacherForUser($user);
+        $visibleUserIds = self::visibleUserIds($user);
+        $teacherIds = self::teacherIdsForUsers($visibleUserIds);
 
-        if (! $teacher) {
+        if ($visibleUserIds->isEmpty() && $teacherIds->isEmpty()) {
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->where(function (Builder $inner) use ($user, $teacher) {
-            $inner->where('submitted_by', $user->id)
-                ->orWhere('teacher_id', $teacher->id)
+        return $query->where(function (Builder $inner) use ($visibleUserIds, $teacherIds, $user) {
+            $inner->whereIn('submitted_by', $visibleUserIds);
+
+            if ($teacherIds->isNotEmpty()) {
+                $inner->orWhereIn('teacher_id', $teacherIds);
+            }
+
+            $inner
                 ->orWhereHas('task', fn (Builder $taskQuery) => self::applyTaskVisibility($taskQuery, $user));
         });
     }
@@ -111,10 +122,33 @@ class AccessScope
         return Teacher::query()->where('user_id', $user->id)->first();
     }
 
-    private static function courseOfferingIdsForTeacher(Teacher $teacher): Collection
+    private static function visibleUserIds(User $user): Collection
+    {
+        $delegatedUserIds = EvidenceAccessDelegation::query()
+            ->where('delegate_user_id', $user->id)
+            ->where(function (Builder $query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->pluck('source_user_id');
+
+        return $delegatedUserIds
+            ->push($user->id)
+            ->unique()
+            ->values();
+    }
+
+    private static function teacherIdsForUsers(Collection $userIds): Collection
+    {
+        return Teacher::query()
+            ->whereIn('user_id', $userIds)
+            ->pluck('id');
+    }
+
+    private static function courseOfferingIdsForTeachers(Collection $teacherIds): Collection
     {
         return CourseAssignment::query()
-            ->where('teacher_id', $teacher->id)
+            ->whereIn('teacher_id', $teacherIds)
             ->whereHas('courseOffering')
             ->pluck('course_offering_id')
             ->unique()
