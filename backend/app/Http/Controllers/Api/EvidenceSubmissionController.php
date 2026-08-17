@@ -17,7 +17,7 @@ class EvidenceSubmissionController extends Controller
 {
     public function store(StoreEvidenceSubmissionRequest $request, EvidenceTask $evidenceTask, EvidenceService $service)
     {
-        abort_unless(AccessScope::taskIsVisible($evidenceTask, $request->user()), 403, 'No puedes subir archivos a una tarea que no te corresponde.');
+        abort_unless(AccessScope::taskIsWritable($evidenceTask, $request->user()), 403, 'No puedes subir archivos a una tarea que no te corresponde.');
 
         $files = $request->file('files', []);
         $assets = FileAsset::query()

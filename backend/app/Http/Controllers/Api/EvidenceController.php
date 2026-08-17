@@ -96,7 +96,7 @@ class EvidenceController extends Controller
 
         if (AccessScope::isTeacherOnly($request->user())) {
             $task = ! empty($data['evidence_task_id']) ? EvidenceTask::find($data['evidence_task_id']) : null;
-            abort_unless($task && AccessScope::taskIsVisible($task, $request->user()), 403, 'No puedes registrar evidencias fuera de tus tareas asignadas.');
+            abort_unless($task && AccessScope::taskIsWritable($task, $request->user()), 403, 'No puedes registrar evidencias fuera de tus tareas asignadas.');
         }
 
         $asset = $this->assetForRequest($request, $data['file_asset_id'] ?? null);
@@ -119,7 +119,7 @@ class EvidenceController extends Controller
 
     public function version(StoreEvidenceVersionRequest $request, EvidenceSubmission $evidence, EvidenceService $service)
     {
-        abort_unless(AccessScope::evidenceIsVisible($evidence, $request->user()), 403, 'No puedes modificar esta evidencia.');
+        abort_unless(AccessScope::evidenceIsWritable($evidence, $request->user()), 403, 'No puedes modificar esta evidencia.');
 
         $data = $request->validated();
         $asset = $this->assetForRequest($request, $data['file_asset_id'] ?? null);

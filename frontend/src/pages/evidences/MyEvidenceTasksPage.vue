@@ -301,6 +301,7 @@
             <q-td key="actions" :props="props" class="text-center">
               <div class="table-actions">
                 <q-btn
+                  v-if="props.row.can_upload"
                   unelevated
                   no-caps
                   size="sm"
@@ -392,6 +393,7 @@
 
               <q-card-actions align="right" class="q-px-md q-pb-md">
                 <q-btn
+                  v-if="props.row.can_upload"
                   unelevated
                   no-caps
                   color="primary"
@@ -547,6 +549,7 @@
                 <td class="text-center">
                   <div class="group-task-actions">
                     <q-btn
+                      v-if="task.can_upload"
                       unelevated
                       no-caps
                       dense

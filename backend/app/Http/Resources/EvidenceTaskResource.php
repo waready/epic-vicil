@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\AccessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,6 +18,7 @@ class EvidenceTaskResource extends JsonResource
             'context_type' => $this->context_type,
             'context_id' => $this->context_id,
             'context_label' => $this->contextLabel(),
+            'can_upload' => AccessScope::taskIsWritable($this->resource, $request->user()),
             'program' => $this->whenLoaded('program'),
             'cycle' => $this->whenLoaded('cycle'),
             'criterion' => $this->whenLoaded('criterion'),

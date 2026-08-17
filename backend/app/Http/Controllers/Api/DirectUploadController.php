@@ -138,7 +138,7 @@ class DirectUploadController extends Controller
     {
         if (! empty($data['evidence_task_id'])) {
             $task = EvidenceTask::findOrFail($data['evidence_task_id']);
-            abort_unless(AccessScope::taskIsVisible($task, $request->user()), 403, 'No puedes subir archivos a una tarea que no te corresponde.');
+            abort_unless(AccessScope::taskIsWritable($task, $request->user()), 403, 'No puedes subir archivos a una tarea que no te corresponde.');
 
             return [
                 'program_id' => $task->program_id,

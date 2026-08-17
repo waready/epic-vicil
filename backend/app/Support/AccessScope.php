@@ -101,6 +101,15 @@ class AccessScope
             ->exists();
     }
 
+    public static function taskIsWritable(EvidenceTask $task, ?User $user): bool
+    {
+        if (! self::isTeacherOnly($user)) {
+            return true;
+        }
+
+        return (int) $task->assigned_to === (int) $user?->id;
+    }
+
     public static function evidenceIsVisible(EvidenceSubmission $evidence, ?User $user): bool
     {
         if (! self::isTeacherOnly($user)) {
@@ -111,6 +120,16 @@ class AccessScope
             ->whereKey($evidence->id)
             ->tap(fn (Builder $query) => self::applyEvidenceVisibility($query, $user))
             ->exists();
+    }
+
+    public static function evidenceIsWritable(EvidenceSubmission $evidence, ?User $user): bool
+    {
+        if (! self::isTeacherOnly($user)) {
+            return true;
+        }
+
+        return (int) $evidence->submitted_by === (int) $user?->id
+            || ($evidence->task && self::taskIsWritable($evidence->task, $user));
     }
 
     public static function teacherForUser(?User $user): ?Teacher
