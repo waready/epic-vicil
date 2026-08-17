@@ -27,8 +27,11 @@ class MyEvidenceController extends Controller
                 'courseOfferingContext.course',
                 'courseOfferingContext.term',
                 'teacherContext',
-            ])
-            ->tap(fn ($taskQuery) => AccessScope::applyTaskVisibility($taskQuery, $user))
+            ]);
+
+        AccessScope::applyTaskVisibility($query, $user);
+
+        $query
             ->where(function ($contextQuery) {
                 $contextQuery->whereNull('context_type')
                     ->orWhereNotIn('context_type', ['course_offering', 'assessment_course'])
