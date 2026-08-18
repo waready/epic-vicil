@@ -219,7 +219,7 @@ class CatalogController extends Controller
                 'subcriterion:id,code,name',
                 'requirement:id,accreditation_criterion_id,accreditation_subcriterion_id,code,name,applies_to,evidence_kind',
                 'assignee:id,name,email',
-                'courseOfferingContext:id,program_id,academic_term_id,course_id,section,group_code,is_assessment_course,assessment_result_code,assessment_result_name,requires_assessment_video',
+                'courseOfferingContext:id,program_id,academic_term_id,course_id,section,group_code,is_assessment_course,assessment_result_code,assessment_result_name,requires_assessment_video,requires_assessment_systematization',
                 'courseOfferingContext.course:id,study_plan_id,code,name',
                 'courseOfferingContext.term:id,academic_year_id,code,name',
             ])

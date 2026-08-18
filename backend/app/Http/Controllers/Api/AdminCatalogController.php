@@ -861,6 +861,7 @@ class AdminCatalogController extends Controller
             'assessment_result_code' => ['nullable', 'string', 'max:30'],
             'assessment_result_name' => ['nullable', 'string', 'max:255'],
             'requires_assessment_video' => ['boolean'],
+            'requires_assessment_systematization' => ['boolean'],
             'teacher_id' => ['nullable', 'exists:teachers,id'],
             'weekly_hours' => ['nullable', 'numeric', 'min:0', 'max:99'],
         ]);
@@ -935,7 +936,7 @@ class AdminCatalogController extends Controller
                     continue;
                 }
 
-                if ($requirement->code === 'C3-ASS-04' && ! $offering->requires_assessment_video) {
+                if ($requirement->applies_to === 'assessment_course' && ! $this->assessmentRequirementIsEnabled($requirement, $offering)) {
                     continue;
                 }
 
@@ -965,6 +966,7 @@ class AdminCatalogController extends Controller
                         'assessment_result_code' => $offering->assessment_result_code,
                         'assessment_result_name' => $offering->assessment_result_name,
                         'requires_video' => $offering->requires_assessment_video,
+                        'requires_systematization' => $offering->requires_assessment_systematization,
                     ] : null,
                 ]);
 
@@ -1008,7 +1010,7 @@ class AdminCatalogController extends Controller
                 ->get();
 
             foreach ($offerings as $offering) {
-                if ($requirement->code === 'C3-ASS-04' && ! $offering->requires_assessment_video) {
+                if (! $this->assessmentRequirementIsEnabled($requirement, $offering)) {
                     continue;
                 }
 
@@ -1043,6 +1045,7 @@ class AdminCatalogController extends Controller
                         'assessment_result_code' => $offering->assessment_result_code,
                         'assessment_result_name' => $offering->assessment_result_name,
                         'requires_video' => $offering->requires_assessment_video,
+                        'requires_systematization' => $offering->requires_assessment_systematization,
                     ],
                 ]);
             }
@@ -1065,19 +1068,43 @@ class AdminCatalogController extends Controller
             ->where('context_id', $offering->id)
             ->delete();
 
-        if ($offering->requires_assessment_video) {
+        $disabledRequirementCodes = [];
+
+        if (! $offering->requires_assessment_video) {
+            $disabledRequirementCodes[] = 'C3-ASS-04';
+        }
+
+        if (! $offering->requires_assessment_systematization) {
+            $disabledRequirementCodes[] = 'C3-ASS-05';
+        }
+
+        if (empty($disabledRequirementCodes)) {
             return;
         }
 
-        $videoRequirementIds = EvidenceRequirement::query()
-            ->where('code', 'C3-ASS-04')
+        $optionalRequirementIds = EvidenceRequirement::query()
+            ->whereIn('code', $disabledRequirementCodes)
             ->pluck('id');
 
         EvidenceTask::query()
             ->where('context_type', 'assessment_course')
             ->where('context_id', $offering->id)
-            ->whereIn('evidence_requirement_id', $videoRequirementIds)
+            ->whereIn('evidence_requirement_id', $optionalRequirementIds)
+            ->whereDoesntHave('submissions')
             ->delete();
+    }
+
+    private function assessmentRequirementIsEnabled(EvidenceRequirement $requirement, CourseOffering $offering): bool
+    {
+        if ($requirement->code === 'C3-ASS-04') {
+            return (bool) $offering->requires_assessment_video;
+        }
+
+        if ($requirement->code === 'C3-ASS-05') {
+            return (bool) $offering->requires_assessment_systematization;
+        }
+
+        return true;
     }
 
     private function syncTeacherEvidenceTasks(Teacher $teacher, ?int $programId = null): void

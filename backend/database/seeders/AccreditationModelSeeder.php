@@ -57,6 +57,7 @@ class AccreditationModelSeeder extends Seeder
                 ['C3-ASS-02', 'Guias de assessment del curso de medicion', 'assessment_course', 'assessment'],
                 ['C3-ASS-03', 'Rubricas de assessment del resultado del estudiante', 'assessment_course', 'assessment'],
                 ['C3-ASS-04', 'Video de demostracion o sustentacion de 10 minutos', 'assessment_course', 'video', ['mp4']],
+                ['C3-ASS-05', 'Registro de sistematizacion de medicion de resultados del estudiante', 'assessment_course', 'assessment', ['xlsx', 'xls'], false],
             ]],
             ['C4', 'Mejora Continua', [
                 ['C4-DN-01', 'Sistema de aseguramiento de calidad y mejora continua', 'program', 'normative'],
@@ -114,6 +115,7 @@ class AccreditationModelSeeder extends Seeder
             foreach ($requirements as $reqOrder => $requirementData) {
                 [$reqCode, $reqName, $appliesTo, $kind] = array_slice($requirementData, 0, 4);
                 $allowedExtensions = $requirementData[4] ?? config('accreditation.allowed_extensions');
+                $allowsMultipleFiles = $requirementData[5] ?? true;
 
                 EvidenceRequirement::updateOrCreate(
                     ['accreditation_criterion_id' => $criterion->id, 'code' => $reqCode],
@@ -123,7 +125,7 @@ class AccreditationModelSeeder extends Seeder
                         'applies_to' => $appliesTo,
                         'evidence_kind' => $kind,
                         'is_required' => true,
-                        'allows_multiple_files' => true,
+                        'allows_multiple_files' => $allowsMultipleFiles,
                         'allowed_extensions' => $allowedExtensions,
                         'order' => $reqOrder + 1,
                         'is_active' => true,

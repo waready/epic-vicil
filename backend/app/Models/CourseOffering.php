@@ -12,11 +12,13 @@ class CourseOffering extends Model
     protected $fillable = [
         'program_id', 'academic_term_id', 'course_id', 'section', 'group_code', 'enrolled_count', 'status',
         'is_assessment_course', 'assessment_result_code', 'assessment_result_name', 'requires_assessment_video',
+        'requires_assessment_systematization',
     ];
 
     protected $casts = [
         'is_assessment_course' => 'boolean',
         'requires_assessment_video' => 'boolean',
+        'requires_assessment_systematization' => 'boolean',
     ];
 
     public function program()

@@ -61,6 +61,16 @@
           </q-td>
         </template>
 
+        <template v-slot:body-cell-requires_assessment_systematization="props">
+          <q-td :props="props">
+            <q-icon
+              :name="props.row.requires_assessment_systematization ? 'table_view' : 'remove'"
+              :color="props.row.requires_assessment_systematization ? 'positive' : 'grey-6'"
+              size="20px"
+            />
+          </q-td>
+        </template>
+
         <template v-slot:body-cell-roles="props">
           <q-td :props="props">
             <q-chip v-for="role in props.row.roles || []" :key="role.id || role.name" dense color="primary" text-color="white">
@@ -531,6 +541,7 @@ export default {
             { name: 'assessment_result_code', label: 'RE', field: 'assessment_result_code', align: 'center', sortable: true },
             { name: 'is_assessment_course', label: 'Medicion', field: 'is_assessment_course', align: 'center' },
             { name: 'requires_assessment_video', label: 'Video', field: 'requires_assessment_video', align: 'center' },
+            { name: 'requires_assessment_systematization', label: 'Excel', field: 'requires_assessment_systematization', align: 'center' },
             { name: 'enrolled_count', label: 'Matriculados', field: 'enrolled_count', align: 'center' },
             { name: 'status', label: 'Estado', field: 'status', align: 'center' },
             { name: 'actions', label: 'Acciones', align: 'center' }
@@ -549,6 +560,7 @@ export default {
             { name: 'assessment_result_code', label: 'Resultado del estudiante (RE-Ixx)', visibleWhen: form => form.is_assessment_course },
             { name: 'assessment_result_name', label: 'Nombre del resultado', visibleWhen: form => form.is_assessment_course, class: 'col-12 col-md-6' },
             { name: 'requires_assessment_video', label: 'Requiere video de 10 minutos', type: 'toggle', default: false, visibleWhen: form => form.is_assessment_course },
+            { name: 'requires_assessment_systematization', label: 'Requiere Excel de sistematización', type: 'toggle', default: false, visibleWhen: form => form.is_assessment_course },
             { name: 'status', label: 'Estado', type: 'select', options: 'offeringStatuses', default: 'active' }
           ]
         },
@@ -1087,6 +1099,7 @@ export default {
         data.assessment_result_code = null
         data.assessment_result_name = null
         data.requires_assessment_video = false
+        data.requires_assessment_systematization = false
       }
       return data
     },
