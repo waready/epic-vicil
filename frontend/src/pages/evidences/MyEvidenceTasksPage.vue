@@ -615,6 +615,28 @@
               pesados, espera a que la carga termine antes de cerrar esta ventana.
             </q-banner>
 
+            <q-banner
+              v-if="selectedTask?.requirement?.guidance_file_asset_id"
+              class="upload-guidance-banner q-mt-md"
+              rounded
+            >
+              <template #avatar>
+                <q-icon name="description" color="primary" />
+              </template>
+              Revisa el archivo de orientación antes de preparar tu evidencia.
+              <template #action>
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  color="primary"
+                  icon="download"
+                  label="Descargar orientación"
+                  @click="downloadGuidance"
+                />
+              </template>
+            </q-banner>
+
             <div class="q-mt-lg">
               <q-input
                 v-model="uploadForm.title"
@@ -1071,6 +1093,29 @@ export default {
         files: []
       }
       this.uploadDialog = true
+    },
+
+    async downloadGuidance () {
+      const requirementId = this.selectedTask?.requirement?.id
+      if (!requirementId) return
+
+      try {
+        const response = await this.$api.get(
+          `/evidence-requirements/${requirementId}/guidance-file`
+        )
+        const url = response.data?.data?.download_url
+
+        if (!url) {
+          throw new Error('No se pudo generar el enlace de descarga.')
+        }
+
+        window.open(url, '_blank', 'noopener')
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: error.response?.data?.message || 'No se pudo descargar el archivo de orientación'
+        })
+      }
     },
 
     async submitTask () {
@@ -1864,6 +1909,13 @@ export default {
 .upload-info-banner {
   border: 1px solid #dbeafe;
   background: #f4f9ff;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.upload-guidance-banner {
+  border: 1px solid #d7e7f7;
+  background: #f8fbff;
   color: #475569;
   font-size: 0.82rem;
 }

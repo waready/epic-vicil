@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class EvidenceRequirement extends Model
 {
     protected $fillable = [
-        'accreditation_criterion_id', 'accreditation_subcriterion_id', 'code', 'name', 'description', 'applies_to',
+        'accreditation_criterion_id', 'accreditation_subcriterion_id', 'code', 'name', 'description', 'guidance_file_asset_id', 'applies_to',
         'evidence_kind', 'is_required', 'allows_multiple_files', 'allowed_extensions', 'order', 'is_active'
     ];
 
@@ -21,5 +21,10 @@ class EvidenceRequirement extends Model
     public function subcriterion()
     {
         return $this->belongsTo(AccreditationSubcriterion::class, 'accreditation_subcriterion_id');
+    }
+
+    public function guidanceFile()
+    {
+        return $this->belongsTo(FileAsset::class, 'guidance_file_asset_id');
     }
 }

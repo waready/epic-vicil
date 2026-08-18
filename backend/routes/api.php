@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/accreditation-cycles', [CatalogController::class, 'accreditationCycles']);
     Route::get('/accreditation-criteria', [CatalogController::class, 'criteria']);
     Route::get('/evidence-requirements', [CatalogController::class, 'evidenceRequirements']);
+    Route::get('/evidence-requirements/{requirement}/guidance-file', [CatalogController::class, 'evidenceRequirementGuidance'])->middleware('permission:view.evidences');
     Route::get('/evidence-tasks/catalog', [CatalogController::class, 'evidenceTasks']);
     Route::post('/uploads/direct/presign', [DirectUploadController::class, 'presign'])->middleware('permission:create.evidences');
     Route::post('/uploads/direct/complete', [DirectUploadController::class, 'complete'])->middleware('permission:create.evidences');
@@ -123,6 +124,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/evidence-requirements', [AdminCatalogController::class, 'evidenceRequirements']);
         Route::post('/evidence-requirements', [AdminCatalogController::class, 'storeEvidenceRequirement']);
         Route::put('/evidence-requirements/{requirement}', [AdminCatalogController::class, 'updateEvidenceRequirement']);
+        Route::post('/evidence-requirements/{requirement}/guidance-file', [AdminCatalogController::class, 'uploadEvidenceRequirementGuidance']);
         Route::post('/evidence-requirements/{requirement}/consolidate', [AdminCatalogController::class, 'consolidateEvidenceRequirement']);
         Route::delete('/evidence-requirements/{requirement}', [AdminCatalogController::class, 'destroyEvidenceRequirement']);
 

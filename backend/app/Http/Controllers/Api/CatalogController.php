@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\FileAssetResource;
 use App\Models\AcademicProgram;
 use App\Models\AcademicTerm;
 use App\Models\AccreditationCycle;
@@ -90,6 +91,7 @@ class CatalogController extends Controller
                 'accreditation_subcriterion_id',
                 'code',
                 'name',
+                'guidance_file_asset_id',
                 'applies_to',
                 'evidence_kind',
                 'is_required',
@@ -105,6 +107,23 @@ class CatalogController extends Controller
         }
 
         return response()->json($query->get());
+    }
+
+    public function evidenceRequirementGuidance(Request $request, EvidenceRequirement $requirement)
+    {
+        if (AccessScope::isTeacherOnly($request->user())) {
+            $taskQuery = EvidenceTask::query()
+                ->where('evidence_requirement_id', $requirement->id);
+
+            AccessScope::applyTaskVisibility($taskQuery, $request->user());
+
+            abort_unless($taskQuery->exists(), 403, 'No puedes acceder a esta orientación.');
+        }
+
+        $requirement->load('guidanceFile');
+        abort_unless($requirement->guidanceFile, 404, 'Este requerimiento no tiene un archivo de orientación.');
+
+        return new FileAssetResource($requirement->guidanceFile);
     }
 
     public function studyPlans(Request $request)

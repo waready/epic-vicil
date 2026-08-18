@@ -24,6 +24,7 @@ use App\Services\EvidenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
@@ -543,7 +544,11 @@ class AdminCatalogController extends Controller
     public function evidenceRequirements()
     {
         return response()->json(EvidenceRequirement::query()
-            ->with(['criterion.accreditationModel:id,code,name', 'subcriterion:id,code,name'])
+            ->with([
+                'criterion.accreditationModel:id,code,name',
+                'subcriterion:id,code,name',
+                'guidanceFile:id,original_name,extension,size_bytes',
+            ])
             ->orderBy('accreditation_criterion_id')
             ->orderBy('order')
             ->orderBy('code')
@@ -553,8 +558,21 @@ class AdminCatalogController extends Controller
     public function storeEvidenceRequirement(Request $request)
     {
         $data = $this->validateEvidenceRequirement($request);
+        $requirement = DB::transaction(function () use ($data, $request) {
+            $requirement = EvidenceRequirement::create($data);
 
-        return response()->json(EvidenceRequirement::create($data)->load(['criterion.accreditationModel:id,code,name', 'subcriterion:id,code,name']), 201);
+            if ($requirement->is_active && $requirement->applies_to === 'assessment_course') {
+                $this->createAssessmentTasksForRequirement($requirement, $request->user()?->id);
+            }
+
+            return $requirement;
+        });
+
+        return response()->json($requirement->load([
+            'criterion.accreditationModel:id,code,name',
+            'subcriterion:id,code,name',
+            'guidanceFile:id,original_name,extension,size_bytes',
+        ]), 201);
     }
 
     public function updateEvidenceRequirement(Request $request, EvidenceRequirement $requirement)
@@ -562,7 +580,62 @@ class AdminCatalogController extends Controller
         $data = $this->validateEvidenceRequirement($request);
         $requirement->update($data);
 
-        return response()->json($requirement->fresh(['criterion.accreditationModel:id,code,name', 'subcriterion:id,code,name']));
+        return response()->json($requirement->fresh([
+            'criterion.accreditationModel:id,code,name',
+            'subcriterion:id,code,name',
+            'guidanceFile:id,original_name,extension,size_bytes',
+        ]));
+    }
+
+    public function uploadEvidenceRequirementGuidance(Request $request, EvidenceRequirement $requirement)
+    {
+        $maxKb = (int) config('accreditation.max_upload_mb', 100) * 1024;
+        $data = $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'max:'.$maxKb,
+                'extensions:'.implode(',', config('accreditation.allowed_extensions')),
+            ],
+        ]);
+
+        $file = $data['file'];
+        $disk = config('accreditation.storage_disk', 'public');
+        $extension = strtolower($file->getClientOriginalExtension());
+        $baseName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'orientacion';
+        $storedName = $baseName.'-'.Str::random(12).'.'.$extension;
+        $path = $file->storeAs(
+            'accreditation/orientations/requirement-'.$requirement->id,
+            $storedName,
+            $disk
+        );
+
+        abort_unless($path, 422, 'No se pudo guardar el archivo de orientación.');
+
+        $asset = FileAsset::create([
+            'uploaded_by' => $request->user()->id,
+            'disk' => $disk,
+            'path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'stored_name' => $storedName,
+            'mime_type' => $file->getMimeType(),
+            'extension' => $extension,
+            'size_bytes' => $file->getSize(),
+            'checksum' => hash_file('sha256', $file->getRealPath()),
+            'visibility' => $disk === 'public' ? 'public' : 'private',
+            'metadata' => [
+                'kind' => 'evidence_requirement_guidance',
+                'evidence_requirement_id' => $requirement->id,
+            ],
+        ]);
+
+        $requirement->update(['guidance_file_asset_id' => $asset->id]);
+
+        return response()->json($requirement->fresh([
+            'criterion.accreditationModel:id,code,name',
+            'subcriterion:id,code,name',
+            'guidanceFile:id,original_name,extension,size_bytes',
+        ]));
     }
 
     public function consolidateEvidenceRequirement(
@@ -905,6 +978,74 @@ class AdminCatalogController extends Controller
 
         if ($teacher) {
             $this->syncTeacherEvidenceTasks($teacher, $offering->program_id);
+        }
+    }
+
+    private function createAssessmentTasksForRequirement(EvidenceRequirement $requirement, ?int $createdBy = null): void
+    {
+        $requirement->loadMissing('criterion');
+        $modelId = $requirement->criterion?->accreditation_model_id;
+
+        if (! $modelId) {
+            return;
+        }
+
+        $cycles = AccreditationCycle::query()
+            ->where('accreditation_model_id', $modelId)
+            ->whereIn('status', ['planning', 'active'])
+            ->get();
+
+        foreach ($cycles as $cycle) {
+            $offerings = CourseOffering::query()
+                ->with('mainAssignment.teacher')
+                ->where('program_id', $cycle->program_id)
+                ->where('status', 'active')
+                ->where('is_assessment_course', true)
+                ->when(
+                    $cycle->academic_term_id,
+                    fn ($query, $termId) => $query->where('academic_term_id', $termId)
+                )
+                ->get();
+
+            foreach ($offerings as $offering) {
+                if ($requirement->code === 'C3-ASS-04' && ! $offering->requires_assessment_video) {
+                    continue;
+                }
+
+                $exists = EvidenceTask::query()
+                    ->where('accreditation_cycle_id', $cycle->id)
+                    ->where('evidence_requirement_id', $requirement->id)
+                    ->where('context_type', 'assessment_course')
+                    ->where('context_id', $offering->id)
+                    ->exists();
+
+                if ($exists) {
+                    continue;
+                }
+
+                $assessmentLabel = trim(($offering->assessment_result_code ?: 'Assessment').' '.$offering->assessment_result_name);
+
+                EvidenceTask::create([
+                    'accreditation_cycle_id' => $cycle->id,
+                    'program_id' => $offering->program_id,
+                    'accreditation_criterion_id' => $requirement->accreditation_criterion_id,
+                    'accreditation_subcriterion_id' => $requirement->accreditation_subcriterion_id,
+                    'evidence_requirement_id' => $requirement->id,
+                    'academic_term_id' => $offering->academic_term_id,
+                    'context_type' => 'assessment_course',
+                    'context_id' => $offering->id,
+                    'assigned_to' => $offering->mainAssignment?->teacher?->user_id,
+                    'created_by' => $createdBy,
+                    'status' => 'pending',
+                    'priority' => $requirement->is_required ? 'high' : 'normal',
+                    'instructions' => 'Assessment '.$assessmentLabel.': '.$requirement->name.'.',
+                    'metadata' => [
+                        'assessment_result_code' => $offering->assessment_result_code,
+                        'assessment_result_name' => $offering->assessment_result_name,
+                        'requires_video' => $offering->requires_assessment_video,
+                    ],
+                ]);
+            }
         }
     }
 

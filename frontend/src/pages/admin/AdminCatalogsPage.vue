@@ -142,8 +142,34 @@
                   :type="field.type || 'text'"
                   outlined
                   dense
+                  :min="field.min"
+                  :step="field.step"
+                  :hint="field.hint"
+                  :persistent-hint="Boolean(field.hint)"
                   :rules="field.required ? [val => !!val || 'Campo obligatorio'] : []"
                 />
+              </div>
+
+              <div v-if="activeTab === 'evidenceRequirements'" class="col-12">
+                <q-file
+                  v-model="guidanceFile"
+                  outlined
+                  dense
+                  clearable
+                  counter
+                  :disable="saving || guidanceUploading"
+                  :accept="acceptedFileExtensions"
+                  label="Cargar archivo de orientación"
+                  hint="Plantilla, instructivo o modelo que el docente podrá descargar antes de subir su evidencia."
+                  persistent-hint
+                >
+                  <template #prepend>
+                    <q-icon name="upload_file" />
+                  </template>
+                </q-file>
+                <div v-if="guidanceFileInfo" class="text-caption text-grey-7 q-mt-sm">
+                  Archivo actual: <strong>{{ guidanceFileInfo.original_name }}</strong>
+                </div>
               </div>
             </div>
           </q-card-section>
@@ -271,6 +297,9 @@ export default {
       cvSaving: false,
       cvDirectUploading: false,
       cvUploadProgress: 0,
+      guidanceUploading: false,
+      guidanceFile: null,
+      guidanceFileInfo: null,
       acceptedFileExtensions: acceptedEvidenceExtensions,
       consolidating: false,
       dialog: false,
@@ -632,7 +661,7 @@ export default {
             { name: 'applies_to', label: 'Aplica a', type: 'select', options: 'appliesTo', required: true },
             { name: 'evidence_kind', label: 'Tipo de evidencia', type: 'select', options: 'evidenceKinds', required: true },
             { name: 'allowed_extensions_text', label: 'Extensiones permitidas (separadas por coma)', clientOnly: true, class: 'col-12' },
-            { name: 'order', label: 'Orden', type: 'number' },
+            { name: 'order', label: 'Orden', type: 'number', min: 0, step: 1, hint: '0 se muestra primero; luego usa 1, 2, 3 y así sucesivamente.' },
             { name: 'is_required', label: 'Obligatoria', type: 'toggle', default: true },
             { name: 'allows_multiple_files', label: 'Permite varios archivos', type: 'toggle', default: true },
             { name: 'is_active', label: 'Activo', type: 'toggle', default: true }
@@ -896,6 +925,8 @@ export default {
     openCreate () {
       this.editingId = null
       this.form = this.emptyForm()
+      this.guidanceFile = null
+      this.guidanceFileInfo = null
       this.dialog = true
     },
 
@@ -923,6 +954,8 @@ export default {
         form.allowed_extensions_text = Array.isArray(row.allowed_extensions)
           ? row.allowed_extensions.join(', ')
           : ''
+        this.guidanceFile = null
+        this.guidanceFileInfo = row.guidance_file || null
       }
       this.form = form
       this.dialog = true
@@ -1060,10 +1093,30 @@ export default {
     async save () {
       this.saving = true
       try {
+        let response
         if (this.editingId) {
-          await this.$api.put(`${this.activeConfig.endpoint}/${this.editingId}`, this.payload())
+          response = await this.$api.put(`${this.activeConfig.endpoint}/${this.editingId}`, this.payload())
         } else {
-          await this.$api.post(this.activeConfig.endpoint, this.payload())
+          response = await this.$api.post(this.activeConfig.endpoint, this.payload())
+
+          if (this.activeTab === 'evidenceRequirements' && response.data?.id) {
+            this.editingId = response.data.id
+          }
+        }
+
+        const requirementId = this.activeTab === 'evidenceRequirements'
+          ? (this.editingId || response.data?.id)
+          : null
+
+        if (requirementId && this.guidanceFile) {
+          this.guidanceUploading = true
+          const data = new FormData()
+          data.append('file', this.guidanceFile)
+          await this.$api.post(
+            `/admin/evidence-requirements/${requirementId}/guidance-file`,
+            data,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          )
         }
 
         this.$q.notify({ type: 'positive', message: 'Registro guardado' })
@@ -1078,6 +1131,7 @@ export default {
         this.$q.notify({ type: 'negative', message })
       } finally {
         this.saving = false
+        this.guidanceUploading = false
       }
     },
 
