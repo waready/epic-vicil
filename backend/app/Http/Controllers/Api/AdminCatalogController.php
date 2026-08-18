@@ -713,7 +713,7 @@ class AdminCatalogController extends Controller
             'allows_multiple_files' => ['boolean'],
             'allowed_extensions' => ['nullable', 'array'],
             'allowed_extensions.*' => ['required', 'string', 'max:30'],
-            'order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'order' => ['required', 'integer', 'min:1', 'max:999'],
             'is_active' => ['boolean'],
         ]);
 

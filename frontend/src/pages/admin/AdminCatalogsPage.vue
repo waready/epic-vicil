@@ -146,7 +146,7 @@
                   :step="field.step"
                   :hint="field.hint"
                   :persistent-hint="Boolean(field.hint)"
-                  :rules="field.required ? [val => !!val || 'Campo obligatorio'] : []"
+                  :rules="inputRules(field)"
                 />
               </div>
 
@@ -661,7 +661,7 @@ export default {
             { name: 'applies_to', label: 'Aplica a', type: 'select', options: 'appliesTo', required: true },
             { name: 'evidence_kind', label: 'Tipo de evidencia', type: 'select', options: 'evidenceKinds', required: true },
             { name: 'allowed_extensions_text', label: 'Extensiones permitidas (separadas por coma)', clientOnly: true, class: 'col-12' },
-            { name: 'order', label: 'Orden', type: 'number', min: 0, step: 1, hint: '0 se muestra primero; luego usa 1, 2, 3 y así sucesivamente.' },
+            { name: 'order', label: 'Orden', type: 'number', min: 1, max: 999, step: 1, integer: true, required: true, hint: 'Usa un número entero desde 1. No se permiten 0, negativos ni decimales.' },
             { name: 'is_required', label: 'Obligatoria', type: 'toggle', default: true },
             { name: 'allows_multiple_files', label: 'Permite varios archivos', type: 'toggle', default: true },
             { name: 'is_active', label: 'Activo', type: 'toggle', default: true }
@@ -1057,6 +1057,7 @@ export default {
         form.applies_to = 'program'
         form.evidence_kind = 'record'
         form.allowed_extensions_text = allowedEvidenceExtensionsText
+        form.order = 1
       }
 
       return form
@@ -1088,6 +1089,31 @@ export default {
         data.requires_assessment_video = false
       }
       return data
+    },
+
+    inputRules (field) {
+      const rules = []
+
+      if (field.required) {
+        rules.push(value => !!value || 'Campo obligatorio')
+      }
+
+      if (field.integer) {
+        rules.push(value => {
+          if (value === null || value === undefined || value === '') {
+            return !field.required || 'Campo obligatorio'
+          }
+
+          const number = Number(value)
+          const min = field.min ?? Number.MIN_SAFE_INTEGER
+          const max = field.max ?? Number.MAX_SAFE_INTEGER
+
+          return (Number.isInteger(number) && number >= min && number <= max) ||
+            `Ingresa un número entero entre ${min} y ${max}`
+        })
+      }
+
+      return rules
     },
 
     async save () {
