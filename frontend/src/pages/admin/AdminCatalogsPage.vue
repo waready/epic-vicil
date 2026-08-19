@@ -527,12 +527,12 @@ export default {
           title: 'Carga docente por curso',
           icon: 'event_note',
           endpoint: '/admin/course-offerings',
-          help: 'Asigna cursos, semestre academico y docente responsable para generar evidencias C5 por curso.',
+          help: 'Asigna curso, semestre, grupo y docente responsable para generar evidencias C5 o C3 de assessment.',
           columns: [
             { name: 'course', label: 'Curso', field: row => row.course ? `${row.course.code} - ${row.course.name}` : '', align: 'left', sortable: true },
             { name: 'program', label: 'Programa', field: row => row.program ? row.program.code : '', align: 'left', sortable: true },
             { name: 'term', label: 'Semestre', field: row => row.term ? row.term.code : '', align: 'left', sortable: true },
-            { name: 'section', label: 'Seccion', field: 'section', align: 'center' },
+            { name: 'section', label: 'Grupo / seccion', field: 'section', align: 'center' },
             { name: 'teacher', label: 'Docente principal', field: row => {
               const assignment = (row.assignments || []).find(item => item.role === 'main')
               const teacher = assignment ? assignment.teacher : null
@@ -553,7 +553,7 @@ export default {
             { name: 'course_id', label: 'Curso', type: 'select', options: 'courses', required: true, class: 'col-12 col-md-6' },
             { name: 'teacher_id', label: 'Docente principal', type: 'select', options: 'teachers' },
             { name: 'weekly_hours', label: 'Horas semanales', type: 'number' },
-            { name: 'section', label: 'Seccion' },
+            { name: 'section', label: 'Grupo / seccion' },
             { name: 'group_code', label: 'Codigo de grupo' },
             { name: 'enrolled_count', label: 'Matriculados', type: 'number' },
             { name: 'is_assessment_course', label: 'Curso de medicion / assessment', type: 'toggle', default: false },

@@ -960,11 +960,12 @@ class AdminCatalogController extends Controller
                     'assigned_to' => $assignedTo,
                     'priority' => $requirement->is_required ? 'high' : 'normal',
                     'instructions' => $contextType === 'assessment_course'
-                        ? 'Assessment '.$assessmentLabel.': '.$requirement->name.'.'
+                        ? 'Assessment '.$assessmentLabel.' - Grupo '.$offering->section.': '.$requirement->name.'.'
                         : 'Portafolio de curso: '.$requirement->name.'.',
                     'metadata' => $contextType === 'assessment_course' ? [
                         'assessment_result_code' => $offering->assessment_result_code,
                         'assessment_result_name' => $offering->assessment_result_name,
+                        'assessment_group' => $offering->section,
                         'requires_video' => $offering->requires_assessment_video,
                         'requires_systematization' => $offering->requires_assessment_systematization,
                     ] : null,
@@ -1040,10 +1041,11 @@ class AdminCatalogController extends Controller
                     'created_by' => $createdBy,
                     'status' => 'pending',
                     'priority' => $requirement->is_required ? 'high' : 'normal',
-                    'instructions' => 'Assessment '.$assessmentLabel.': '.$requirement->name.'.',
+                    'instructions' => 'Assessment '.$assessmentLabel.' - Grupo '.$offering->section.': '.$requirement->name.'.',
                     'metadata' => [
                         'assessment_result_code' => $offering->assessment_result_code,
                         'assessment_result_name' => $offering->assessment_result_name,
+                        'assessment_group' => $offering->section,
                         'requires_video' => $offering->requires_assessment_video,
                         'requires_systematization' => $offering->requires_assessment_systematization,
                     ],

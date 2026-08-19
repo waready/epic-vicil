@@ -312,8 +312,16 @@ class TeacherEvidenceTrackingController extends Controller
             $assessment = $task->context_type === 'assessment_course'
                 ? trim(($task->courseOfferingContext->assessment_result_code ?: '').' '.$task->courseOfferingContext->assessment_result_name)
                 : '';
+            $group = $task->context_type === 'assessment_course' && $task->courseOfferingContext->section
+                ? 'Grupo '.$task->courseOfferingContext->section
+                : $task->courseOfferingContext->section;
 
-            return trim(($course ? $course->code.' - '.$course->name : 'Curso').' / '.($term ? $term->code : '').' / '.$task->courseOfferingContext->section.($assessment ? ' / '.$assessment : ''));
+            return implode(' / ', array_filter([
+                $course ? $course->code.' - '.$course->name : 'Curso',
+                $term?->code,
+                $group,
+                $assessment,
+            ]));
         }
 
         if ($task->context_type === 'teacher' && $task->teacherContext) {

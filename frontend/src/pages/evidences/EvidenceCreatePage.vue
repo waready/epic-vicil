@@ -243,11 +243,14 @@ export default {
       if (!offering) return ''
 
       const course = offering.course ? `${offering.course.code} ${offering.course.name}` : 'Curso'
+      const group = task.context_type === 'assessment_course' && offering.section
+        ? ` / Grupo ${offering.section}`
+        : ''
       const assessment = offering.assessment_result_code
         ? ` / ${offering.assessment_result_code}${offering.assessment_result_name ? ' - ' + offering.assessment_result_name : ''}`
         : ''
 
-      return ` / ${course}${assessment}`
+      return ` / ${course}${group}${assessment}`
     },
 
     async submit () {

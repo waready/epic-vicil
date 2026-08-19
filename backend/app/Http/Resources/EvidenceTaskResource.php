@@ -48,8 +48,17 @@ class EvidenceTaskResource extends JsonResource
                 $assessment = $this->context_type === 'assessment_course'
                     ? trim(($this->courseOfferingContext->assessment_result_code ?: '').' '.$this->courseOfferingContext->assessment_result_name)
                     : '';
+                $section = trim((string) $this->courseOfferingContext->section);
+                $sectionLabel = $section === ''
+                    ? null
+                    : ($this->context_type === 'assessment_course' ? 'Grupo '.$section : 'Seccion '.$section);
 
-                return trim(($course ? $course->code.' - '.$course->name : 'Curso').' / '.($term ? $term->code : '').' / '.$this->courseOfferingContext->section.($assessment ? ' / '.$assessment : ''));
+                return implode(' / ', array_filter([
+                    $course ? $course->code.' - '.$course->name : 'Curso',
+                    $term?->code,
+                    $sectionLabel,
+                    $assessment ?: null,
+                ]));
             }
         }
 

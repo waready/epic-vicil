@@ -74,6 +74,7 @@ class GenerateEvidenceTasksCommand extends Command
     private function generateAssessmentCourseTasks(AccreditationCycle $cycle, EvidenceRequirement $requirement): int
     {
         $query = CourseOffering::query()
+            ->with('mainAssignment.teacher')
             ->where('program_id', $cycle->program_id)
             ->where('is_assessment_course', true);
 
@@ -85,15 +86,23 @@ class GenerateEvidenceTasksCommand extends Command
             $query->where('requires_assessment_video', true);
         }
 
+        if ($requirement->code === 'C3-ASS-05') {
+            $query->where('requires_assessment_systematization', true);
+        }
+
         $count = 0;
         foreach ($query->get() as $offering) {
             $this->createTask($cycle, $requirement, 'assessment_course', $offering->id, [
                 'academic_term_id' => $offering->academic_term_id,
-                'instructions' => 'Assessment '.trim(($offering->assessment_result_code ?: '').' '.$offering->assessment_result_name).': '.$requirement->name.'.',
+                'assigned_to' => $offering->mainAssignment?->teacher?->user_id,
+                'instructions' => 'Assessment '.trim(($offering->assessment_result_code ?: '').' '.$offering->assessment_result_name)
+                    .' - Grupo '.$offering->section.': '.$requirement->name.'.',
                 'metadata' => [
                     'assessment_result_code' => $offering->assessment_result_code,
                     'assessment_result_name' => $offering->assessment_result_name,
+                    'assessment_group' => $offering->section,
                     'requires_video' => $offering->requires_assessment_video,
+                    'requires_systematization' => $offering->requires_assessment_systematization,
                 ],
             ]);
             $count++;

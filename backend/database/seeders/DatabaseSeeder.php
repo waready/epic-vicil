@@ -301,7 +301,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV335',
                 'course_name' => 'Trabajo de investigacion',
                 'teachers' => ['Douglas Arturo Quintanilla Anyaipoma', 'Gleny Zoila De La Riva Tapia', 'Gino Nels Najar Vizcarra'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I05',
@@ -309,7 +309,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV311',
                 'course_name' => 'Ingenieria sismorresistente',
                 'teachers' => ['Marwin Douglas Mendoza Larico', 'Alex Darwin Roque Roque'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I06',
@@ -317,7 +317,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV305',
                 'course_name' => 'Legislacion en la construccion',
                 'teachers' => ['Gino Nels Najar Vizcarra', 'Alexis Anibal Condori Colque'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I07',
@@ -325,7 +325,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV337',
                 'course_name' => 'Gestion ambiental',
                 'teachers' => ['Zenon Mellado Vargas', 'Nancy Zevallos Quispe'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I08',
@@ -333,7 +333,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV334',
                 'course_name' => 'Metodologia de la Investigacion',
                 'teachers' => ['Douglas Arturo Quintanilla Anyaipoma', 'Nestor Leodan Suca Suca'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I09',
@@ -341,7 +341,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV304',
                 'course_name' => 'Taller de proyectos de edificacion',
                 'teachers' => ['Diana Elizabeth Quinto Gastiaburu', 'Jaime Medina Leiva', 'Emilio Augusto Molina Chavez'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I10',
@@ -349,7 +349,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV338',
                 'course_name' => 'Practica pre profesional',
                 'teachers' => ['Carlos Alberto Gonzales Gutierrez'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I11',
@@ -357,7 +357,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV303',
                 'course_name' => 'Gestion y administracion en la construccion',
                 'teachers' => ['Carlos Alberto Gonzales Gutierrez', 'Gino Nels Najar Vizcarra'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
             [
                 'result_code' => 'RE-I12',
@@ -365,7 +365,7 @@ class DatabaseSeeder extends Seeder
                 'course_code' => 'CIV335',
                 'course_name' => 'Trabajo de investigacion',
                 'teachers' => ['Douglas Arturo Quintanilla Anyaipoma', 'Gleny Zoila De La Riva Tapia', 'Gino Nels Najar Vizcarra'],
-                'requires_video' => true,
+                'requires_video' => false,
             ],
         ];
 
@@ -391,43 +391,65 @@ class DatabaseSeeder extends Seeder
 
             $course->save();
 
-            $offering = CourseOffering::updateOrCreate(
-                [
+            foreach ($row['teachers'] as $index => $teacherName) {
+                $group = chr(ord('A') + $index);
+                $teacher = $this->seedTeacherFromName($institution, $teacherName);
+
+                $offering = CourseOffering::withTrashed()
+                    ->where('program_id', $program->id)
+                    ->where('academic_term_id', $term->id)
+                    ->where('course_id', $course->id)
+                    ->where('is_assessment_course', true)
+                    ->where('assessment_result_code', $row['result_code'])
+                    ->where('section', $group)
+                    ->first();
+
+                if (! $offering && $group === 'A') {
+                    $offering = CourseOffering::withTrashed()
+                        ->where('program_id', $program->id)
+                        ->where('academic_term_id', $term->id)
+                        ->where('course_id', $course->id)
+                        ->where('is_assessment_course', true)
+                        ->where('assessment_result_code', $row['result_code'])
+                        ->where('section', 'ASSESSMENT-'.$row['result_code'])
+                        ->first();
+                }
+
+                $offering ??= new CourseOffering();
+                $offering->fill([
                     'program_id' => $program->id,
                     'academic_term_id' => $term->id,
                     'course_id' => $course->id,
-                    'section' => 'ASSESSMENT-'.$row['result_code'],
-                ],
-                [
-                    'group_code' => $row['result_code'],
-                    'enrolled_count' => 0,
+                    'section' => $group,
+                    'group_code' => $row['result_code'].'-'.$group,
+                    'enrolled_count' => $offering->enrolled_count ?? 0,
                     'status' => 'active',
                     'is_assessment_course' => true,
                     'assessment_result_code' => $row['result_code'],
                     'assessment_result_name' => $row['result_name'],
                     'requires_assessment_video' => $row['requires_video'],
-                ]
-            );
-            $assessmentOfferingIds[] = $offering->id;
+                ]);
+                $offering->deleted_at = null;
+                $offering->save();
+                $assessmentOfferingIds[] = $offering->id;
 
-            $teacherIds = [];
-            foreach ($row['teachers'] as $index => $teacherName) {
-                $teacher = $this->seedTeacherFromName($institution, $teacherName);
-                $teacherIds[] = $teacher->id;
                 CourseAssignment::updateOrCreate(
                     [
                         'course_offering_id' => $offering->id,
                         'teacher_id' => $teacher->id,
-                        'role' => $index === 0 ? 'main' : 'co_teacher',
+                        'role' => 'main',
                     ],
                     ['weekly_hours' => null]
                 );
-            }
 
-            CourseAssignment::query()
-                ->where('course_offering_id', $offering->id)
-                ->whereNotIn('teacher_id', $teacherIds)
-                ->delete();
+                CourseAssignment::query()
+                    ->where('course_offering_id', $offering->id)
+                    ->where(function ($query) use ($teacher) {
+                        $query->where('teacher_id', '!=', $teacher->id)
+                            ->orWhere('role', '!=', 'main');
+                    })
+                    ->delete();
+            }
         }
 
         $this->pruneSeededAssessmentOfferings($program, $term, $assessmentOfferingIds);
@@ -438,7 +460,7 @@ class DatabaseSeeder extends Seeder
         $obsolete = CourseOffering::query()
             ->where('program_id', $program->id)
             ->where('academic_term_id', $term->id)
-            ->where('section', 'like', 'ASSESSMENT%')
+            ->where('group_code', 'like', 'RE-I%')
             ->where('is_assessment_course', true)
             ->when($validOfferingIds !== [], fn ($query) => $query->whereNotIn('id', $validOfferingIds))
             ->get();
@@ -1025,6 +1047,10 @@ class DatabaseSeeder extends Seeder
                         continue;
                     }
 
+                    if ($requirement->code === 'C3-ASS-05' && ! $courseOffering->requires_assessment_systematization) {
+                        continue;
+                    }
+
                     $mainAssignment = $courseOffering->mainAssignment;
                     $label = trim(($courseOffering->assessment_result_code ?: 'Assessment').' '.$courseOffering->assessment_result_name);
 
@@ -1043,11 +1069,13 @@ class DatabaseSeeder extends Seeder
                             'assigned_to' => $mainAssignment?->teacher?->user_id,
                             'status' => 'pending',
                             'priority' => $requirement->code === 'C3-ASS-04' ? 'high' : ($requirement->is_required ? 'high' : 'normal'),
-                            'instructions' => 'Assessment '.$label.': '.$requirement->name.'.',
+                            'instructions' => 'Assessment '.$label.' - Grupo '.$courseOffering->section.': '.$requirement->name.'.',
                             'metadata' => [
                                 'assessment_result_code' => $courseOffering->assessment_result_code,
                                 'assessment_result_name' => $courseOffering->assessment_result_name,
+                                'assessment_group' => $courseOffering->section,
                                 'requires_video' => $courseOffering->requires_assessment_video,
+                                'requires_systematization' => $courseOffering->requires_assessment_systematization,
                             ],
                         ]
                     );

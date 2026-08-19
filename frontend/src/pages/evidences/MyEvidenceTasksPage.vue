@@ -993,6 +993,19 @@ export default {
       }
     },
 
+    assessmentGroupLabel (offering) {
+      const rawGroup = String(
+        offering.section || offering.group_code || ''
+      ).trim()
+
+      if (!rawGroup) return ''
+
+      const groupMatch = rawGroup.match(/(?:^|-)([A-Z])$/i)
+      const group = groupMatch ? groupMatch[1] : rawGroup
+
+      return `Grupo ${group.toUpperCase()}`
+    },
+
     taskGroupMeta (task) {
       if (task.context_type === 'teacher') {
         return {
@@ -1021,14 +1034,17 @@ export default {
         const resultCode = offering.assessment_result_code || 'RE'
         const resultName =
           offering.assessment_result_name || 'Resultado del estudiante'
+        const groupLabel = this.assessmentGroupLabel(offering)
 
         return {
           key: `assessment-${task.context_id}`,
           kind: 'assessment',
-          title: `${resultCode} · ${courseLabel}`,
+          title: [resultCode, courseLabel, groupLabel]
+            .filter(Boolean)
+            .join(' · '),
           subtitle: `${resultName}. Incluye los productos y los instrumentos usados en la medición.`,
           icon: 'fact_check',
-          sort: `b-${resultCode}-${courseLabel}`
+          sort: `b-${resultCode}-${courseLabel}-${groupLabel}`
         }
       }
 
