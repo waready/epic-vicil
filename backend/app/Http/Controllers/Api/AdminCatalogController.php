@@ -862,7 +862,7 @@ class AdminCatalogController extends Controller
             'assessment_result_name' => ['nullable', 'string', 'max:255'],
             'requires_assessment_video' => ['boolean'],
             'requires_assessment_systematization' => ['boolean'],
-            'teacher_id' => ['nullable', 'exists:teachers,id'],
+            'teacher_id' => ['required', 'exists:teachers,id'],
             'weekly_hours' => ['nullable', 'numeric', 'min:0', 'max:99'],
         ]);
     }

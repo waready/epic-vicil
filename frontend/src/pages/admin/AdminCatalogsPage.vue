@@ -551,7 +551,7 @@ export default {
             { name: 'academic_term_id', label: 'Semestre', type: 'select', options: 'terms', required: true },
             { name: 'study_plan_id', label: 'Curricula / plan', type: 'select', options: 'studyPlans', clientOnly: true, class: 'col-12 col-md-6' },
             { name: 'course_id', label: 'Curso', type: 'select', options: 'courses', required: true, class: 'col-12 col-md-6' },
-            { name: 'teacher_id', label: 'Docente principal', type: 'select', options: 'teachers' },
+            { name: 'teacher_id', label: 'Docente principal', type: 'select', options: 'teachers', required: true },
             { name: 'weekly_hours', label: 'Horas semanales', type: 'number' },
             { name: 'section', label: 'Grupo / seccion' },
             { name: 'group_code', label: 'Codigo de grupo' },

@@ -508,6 +508,10 @@ class DatabaseSeeder extends Seeder
                 ]
             );
 
+            if (! $row['teacher_name']) {
+                continue;
+            }
+
             $offering = CourseOffering::firstOrNew([
                 'program_id' => $program->id,
                 'academic_term_id' => $term->id,
@@ -531,10 +535,6 @@ class DatabaseSeeder extends Seeder
             }
 
             $offering->save();
-
-            if (! $row['teacher_name']) {
-                continue;
-            }
 
             $teacher = $this->seedTeacherFromName($institution, $row['teacher_name']);
             $mainAssignment = CourseAssignment::query()
